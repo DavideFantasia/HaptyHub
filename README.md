@@ -14,6 +14,11 @@ Once cloned the repo, you can install all the requirements in a virtual envirome
 source venv/bin/activate
 pip3 install -r requirements.txt
 ```
+In order to execute all the software's dependencies, it is required to have installed `libxcb-cursor0` 
+to let PyQt read the cursor informations:
+```
+sudo apt install libxcb-cursor0
+```
 
 ### Windows
 Once cloned the repo, you can install all the requirements in a virtual enviroments as:
