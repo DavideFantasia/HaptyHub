@@ -2,11 +2,14 @@ import sys
 import os
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QTextEdit, QPushButton, QMenuBar, QMenu, 
-                             QFileDialog, QFrame, QSizePolicy, QStyle)
+                             QFileDialog, QFrame, QSizePolicy, QStyle, QStackedWidget)
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
+from src.ui.panels import GraphFormPanel, TextOnlyPanel
+
 from src.api_client import GeminiClient
+from src.api_client import TestClient # Classe di test senza chiamate API reali
 import time
 
 # Importa la configurazione e gli helper
@@ -25,7 +28,10 @@ class GeminiWorker(QThread):
         self.image_path = image_path
         self.prompt_fase_1 = prompt_fase_1
         self.prompt_fase_2 = prompt_fase_2
-        self.client = GeminiClient()
+        if config.DEBUG_MODE:
+            self.client = TestClient() # Usa il client di test
+        else:
+            self.client = GeminiClient()
 
     def run(self):
         try:
@@ -56,9 +62,6 @@ class LandingWindow(QMainWindow):
         self.setWindowTitle("HaptiGraph")
         self.resize(1000, 700) # Una dimensione iniziale decente
 
-        self.prompt_phase_1 = config.PROMPT_PHASE_1
-        self.prompt_phase_2 = config.PROMPT_PHASE_2
-
         # --- Variabili di stato interne ---
         self.current_image_path = None
 
@@ -72,7 +75,7 @@ class LandingWindow(QMainWindow):
         """Crea la barra dei menu con la voce 'File'."""
         menu_bar = self.menuBar()
 
-        # Menu 'File'
+        # ======== Menu 'File' ======== 
         file_menu = menu_bar.addMenu("&File")
 
         # Azione segnaposto: Esci
@@ -80,9 +83,27 @@ class LandingWindow(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+        # altre azioni segnaposto se necessario
+        # es... file_menu.addAction(QAction("Nuovo Progetto...", self))
 
-        # Aggiungi qui altre azioni segnaposto se necessario
-        # file_menu.addAction(QAction("Nuovo Progetto...", self))
+        # ======== Menu 'Template' ========
+        template_menu = menu_bar.addMenu("&Template")
+        
+        # Creiamo le azioni e le colleghiamo alla funzione di switch tramite l'indice del QStackedWidget
+        act_flow = QAction("Flow Chart", self)
+        act_flow.triggered.connect(lambda: self.switch_template(0))
+        
+        act_dir = QAction("Direct Graph", self)
+        act_dir.triggered.connect(lambda: self.switch_template(1))
+        
+        act_undir = QAction("Undirect Graph", self)
+        act_undir.triggered.connect(lambda: self.switch_template(2))
+        
+        act_set = QAction("Set Theory", self)
+        act_set.triggered.connect(lambda: self.switch_template(3))
+
+        template_menu.addActions([act_flow, act_dir, act_undir, act_set])
+        
 
     def _init_central_widget(self):
         """Inizializza il widget centrale e il layout principale."""
@@ -116,17 +137,37 @@ class LandingWindow(QMainWindow):
         self.left_col_layout.addWidget(self.choose_file_btn)
 
 
-        # --- COLONNA DESTRA (Prompt) ---
+        # --- COLONNA DESTRA (Prompt Dinamico) ---
         self.right_col_layout = QVBoxLayout()
         self.main_layout.addLayout(self.right_col_layout, stretch=1)
 
-        # 1. Box di testo modificabile con del testo già presente
-        self.prompt_text_edit = QTextEdit()
-        self.prompt_text_edit.setObjectName("prompt_text") # Per lo styling CSS
-        self.prompt_text_edit.setPlaceholderText("Inserisci qui la tua descrizione...")
-        # Leggi il testo predefinito per il prompt
-        self.prompt_text_edit.setPlainText(self.prompt_phase_1)
-        self.right_col_layout.addWidget(self.prompt_text_edit, stretch=1)
+        # Usiamo QStackedWidget per i layout scambiabili
+        self.stacked_widget = QStackedWidget()
+        
+        # Creiamo i 4 pannelli (l'ordine di inserimento definisce l'indice: 0, 1, 2, 3)
+        self.panel_flow = TextOnlyPanel("Flow Chart")           # Indice 0
+        self.panel_dir = GraphFormPanel(is_directed=True)       # Indice 1
+        self.panel_undir = GraphFormPanel(is_directed=False)    # Indice 2
+        self.panel_set = TextOnlyPanel("Set Theory")            # Indice 3
+        
+        self.stacked_widget.addWidget(self.panel_flow)
+        self.stacked_widget.addWidget(self.panel_dir)
+        self.stacked_widget.addWidget(self.panel_undir)
+        self.stacked_widget.addWidget(self.panel_set)
+
+        #Direct Graph come default (Indice 1)
+        self.stacked_widget.setCurrentIndex(1)
+        
+        self.right_col_layout.addWidget(self.stacked_widget, stretch=1)
+
+        # --- Console di output/log in sola lettura ---
+        self.console_output = QTextEdit()
+        self.console_output.setReadOnly(True)  # L'utente non può scriverci dentro
+        self.console_output.setMaximumHeight(100) # massimo spazio occupato
+        self.console_output.setStyleSheet("background-color: rgba(var(#f0f0f0),0.5); color: rgb(255,255,255); font-family: monospace;")
+        self.console_output.setPlaceholderText("Qui compariranno i log di sistema e i risultati.")
+        
+        self.right_col_layout.addWidget(self.console_output)
 
         # 2. Pulsante sottostante di invio in basso a destra con icona
         # Usiamo un layout orizzontale per posizionarlo a destra
@@ -149,6 +190,10 @@ class LandingWindow(QMainWindow):
         self.send_btn.setIconSize(self.send_btn.sizeHint().expandedTo(self.send_btn.minimumSize()))
         self.send_btn.clicked.connect(self.handle_send_to_gemini)
         self.send_btn_layout.addWidget(self.send_btn)
+    
+    def switch_template(self, index):
+        """Cambia il pannello visibile in base alla scelta del menu."""
+        self.stacked_widget.setCurrentIndex(index)
 
     def _apply_styles(self):
         """Applica un foglio di stile CSS per definire l'aspetto dei placeholder."""
@@ -209,40 +254,61 @@ class LandingWindow(QMainWindow):
                 self.current_image_path = None
 
     def handle_send_to_gemini(self):
-        prompt_text = self.prompt_text_edit.toPlainText()
         image_path = self.current_image_path
-
         if not image_path:
-            self.prompt_text_edit.setPlainText("Errore: Seleziona un'immagine prima di inviare!")
+            self.console_output.append(">> ERRORE: Nessuna immagine selezionata. Scegli un file prima di inviare.")
             return
 
+        self.console_output.clear()
         # Disabilita il pulsante per evitare doppi invii
         self.send_btn.setEnabled(False)
-        self.prompt_text_edit.setPlainText("Inizializzazione connessione a Gemini...")
+        
+        # Chiediamo al pannello attualmente visibile
+        # di restituirci l'oggetto Prompt con tutti i dati già compilati
+        active_panel = self.stacked_widget.currentWidget()
+        prompt_obj = active_panel.get_prompt_object()
 
         # Creiamo il worker e lo colleghiamo ai metodi della UI
-        self.worker = GeminiWorker(image_path, self.prompt_phase_1, self.prompt_phase_2)
-        self.worker.progress.connect(self.update_ui_progress)
-        self.worker.finished.connect(self.handle_generation_success)
-        self.worker.error.connect(self.handle_generation_error)
-        
+        self.worker = GeminiWorker(image_path, prompt_obj.get_phase_1(), prompt_obj.get_phase_2())
+
+        self.worker.progress.connect(self.update_ui_progress, type=Qt.ConnectionType.UniqueConnection)
+        self.worker.finished.connect(self.handle_generation_success, type=Qt.ConnectionType.UniqueConnection)
+        self.worker.error.connect(self.handle_generation_error, type=Qt.ConnectionType.UniqueConnection)
+
         # Avvia il processo in background
         self.worker.start()
 
-    # --- Nuovi metodi da aggiungere in LandingWindow ---
-
     def update_ui_progress(self, message):
-        """Aggiorna la casella di testo con lo stato attuale."""
-        self.prompt_text_edit.setPlainText(message)
+        """Aggiorna la console di output con lo stato attuale."""
+        # Usiamo append() invece di setPlainText() per mantenere lo storico dei messaggi
+        self.console_output.append(f"> {message}")
 
     def handle_generation_success(self, filepath):
-        """Chiamato quando il file .scad è stato creato."""
+        """Chiamato quando il file .scad è stato creato con successo."""
         self.send_btn.setEnabled(True)
-        # TODO: Sostiture la casella di testo con il visualizzatore 3D
-        success_msg = f"SUCCESSO!\nFile OpenSCAD generato e salvato in:\n{filepath}"
-        self.prompt_text_edit.setPlainText(success_msg)
+        
+        success_msg = (
+            "\n\n"+
+            ">> ELABORAZIONE COMPLETATA!\n\t"
+            f"File OpenSCAD generato in:\n{filepath}\n"
+        )
+        self.console_output.append(success_msg)
+        self._cleanup_worker()
 
     def handle_generation_error(self, error_message):
-        """Chiamato se qualcosa va storto con l'API."""
+        """Chiamato se qualcosa va storto con l'API o il processo."""
         self.send_btn.setEnabled(True)
-        self.prompt_text_edit.setPlainText(f"Si è verificato un errore:\n\t{error_message}")
+        
+        error_msg = (
+            "\n" + ">> ERRORE CRITICO:\n"
+            f"{error_message}\n"
+            "Verifica la connessione o la chiave API."
+        )
+        self.console_output.append(error_msg)
+        self._cleanup_worker()
+
+    def _cleanup_worker(self):
+        """Forza la distruzione del thread sganciandolo dalla memoria."""
+        if hasattr(self, 'worker') and self.worker is not None:
+            self.worker.deleteLater()
+            self.worker = None  #taglia il riferimento e forza il __del__

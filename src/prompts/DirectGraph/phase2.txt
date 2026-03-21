@@ -1,0 +1,224 @@
+Generate an OpenSCAD script as a downloadable file that creates a 3D-printable model of a directed graph described using logical 2D coordinates (X, Y) of the nodes.
+---
+
+### CRITICAL COORDINATE ASSUMPTIONS (TO AVOID MAPPING ERRORS)
+
+- You must treat (X, Y) as:
+  - **X = left to right** (horizontal)
+  - **Y = bottom to top** (vertical)
+- Do not reinterpret the coordinate system from your own geometry.
+- Use **only the logical (X, Y)** provided in the previous step.
+
+---
+
+GLOBAL RULES
+The model must be:
+- Be deterministic and structurally accurate.
+- Preserve the visual layout from the coordinate system.
+- Ensure the model is centered and scaled to fit a fixed 200 mm × 200 mm base.
+- Be fully compatible with OpenSCAD 2021.01 (important). 
+- Explicitly declare all computed values like scale, offset, margin.
+- If there are weights you have to represent them, don't skip this thing
+- All edge weights (visible in the image) must be included on the base plane and clearly associated with the corresponding edges. 
+
+- No weight can be omitted. 
+
+- If they are present and if weights are missing, the output is considered invalid. 
+Their position must follow orthogonal offset rules to avoid overlapping with nodes or arrows. 
+
+---
+
+REQUIREMENTS
+
+1. BASE (FIXED 200 × 200 mm)
+- Generate a flat rectangular base with:
+  - Dimensions: 200 mm × 200 mm
+  - Thickness: at least 3 mm
+- Center the base at the origin (X = 0, Y = 0) in the OpenSCAD workspace.
+- The base must not resize according to the graph.
+- Maintain a uniform 10 mm margin between the outermost node and the edge of the base.
+- Compute the bounding box from the given logical coordinates and calculate:
+  - scale = max uniform scale that fits the graph (with margin)
+  - x_offset and y_offset to center the graph
+
+2. GRAPH SCALING (EXPLICIT)
+- Compute:
+  - min_x, max_x, min_y, max_y from the node list.
+  - graph_width, graph_height
+  - scale = min((base_size - 2*margin) / graph_width, (base_size - 2*margin) / graph_height)
+  - x_offset = -((min_x + max_x)/2 * scale)
+  - y_offset = -((min_y + max_y)/2 * scale)
+- Declare:
+  - scale, x_offset, y_offset, and margin as named variables in the code.
+
+3. NODES
+- Represent each node as a vertical cylinder at its scaled (X, Y) position:
+  - node_radius = 0.12 * scale
+  - node_height = 0.25 * scale
+- Add a text label (the node name) engraved or embossed at the center-top of each cylinder:
+  - Use text() and linear_extrude()
+  - Align using halign = "center" and valign = "center"
+  - Set label height = 1.5 mm
+  - Set font size = node_radius * 1.4
+  - Ensure the label is fused to the node cylinder
+- If the node also contains a price (e.g., cost or distance value), add it as a separate text object:
+  - The price must be placed on the workbase at Z = base_thickness
+
+- The vertical placement logic for prices must follow these rules strictly and sequentially:
+- Use text(text=..., size=..., halign="center", valign="center") in OpenSCAD 2021.01.
+
+  1. Classify the node position using its original logical Y coordinate (before scaling):
+     - If Y ≥ 0 → default position is above.
+     - If Y < 0 → default position is below.
+     - This classification is mandatory and must not be skipped or replaced by geometric heuristics.
+
+  2. Check if default position fits:
+     - Let y_px be the scaled Y position of the node.
+     - Let delta = node_radius + 0.35 * scale (vertical offset).
+     - Let label_clearance = font_size * 0.6
+     - Let total_price_height = label_clearance + delta
+     - Let text_height = 1.5
+     - Let max_y = base_size / 2 - margin
+
+     - If default is above: check if y_px + delta + text_height/2 ≤ max_y
+     - If default is below: check if y_px - delta - text_height/2 ≥ -max_y
+
+  3. If the default direction fails, attempt the opposite direction using the same check.
+
+  4. If both directions fail, clamp the price inside the margin:
+     - If Y ≥ 0 → use final_y = max_y - total_price_height / 2
+     - If Y < 0 → use final_y = -max_y + total_price_height / 2
+
+  5. Render the price:
+     - Font size = node_radius * 1.4
+     - Text height = 1.5 mm
+     - Align horizontally (halign = "center", valign = "center")
+     - Place at Z = base_thickness
+     - Ensure it is readable and does not overlap other geometry.
+
+4. EDGES (Directed Connections with Arrowheads)
+
+Each edge consists of:
+- A semi-cylinder representing the edge shaft
+- A flat triangle arrowhead, engraved on the base, pointing to the target node
+
+- Each edge must:
+  - Lie on top of the base at Z = base_thickness
+  - Use radius: edge_radius = 0.05 * scale
+- Use this module:
+
+module edge_cylinder(p1, p2) {
+    // Modified: Asymmetric shortening from the target side only to prevent overlap with arrowhead
+    dx = p2[0] - p1[0];
+    dy = p2[1] - p1[1];
+    length = sqrt(dx*dx + dy*dy);
+    angle = atan2(dy, dx);
+    arrow_gap = node_radius * 2.1;
+    shortened_length = length - arrow_gap;
+    ux = dx / length;
+    uy = dy / length;
+    mx = (p1[0] + p2[0]) / 2 - ux * (arrow_gap / 2);
+    my = (p1[1] + p2[1]) / 2 - uy * (arrow_gap / 2);
+
+    translate([mx, my, base_thickness])
+        rotate([0, 0, angle])
+            rotate([0, 90, 0])
+                cylinder(h = shortened_length, r = edge_radius, center = true, $fn=64);
+}
+
+Edge Shortening (for Arrowhead Placement)
+To leave space for the arrow without intersecting the node:
+- Shorten the cylinder only from the destination side
+- Let:
+  - arrow_gap = node_radius * 2.1
+  - shortened_length = distance(p1, p2) - arrow_gap
+
+This ensures that the tip of the arrowhead touches the destination node's border, and the cylinder ends tangentially before it.
+
+
+
+
+Edge Weight Labels (Embossed on the Base)
+- Must appear as text at `Z = base_thickness`, **not above or on top of the edge**
+- Positioned **slightly to the side of the edge**, orthogonally offset from midpoint
+
+
+Edge Shaft Geometry
+- Cylinder radius: edge_radius = 0.05 * scale
+- Position: centered on the shortened vector
+- Rotation: atan2(dy, dx) (from source to target)
+- Length: distance - arrow_gap
+
+Arrowhead Geometry
+Each arrow is defined as a flat isosceles triangle, extruded vertically:
+- Base width: arrow_width = node_radius * 1.25
+- Height (length): arrow_length = node_radius * 1.2
+- Extrusion height: arrow_thickness = "like the radius of the edge "
+- Drawn in 2D at origin and transformed as follows:
+  1. Tip positioned at: tip = p2 - unit_vector * node_radius
+  2. Triangle defined with points:
+     [0, 0],
+     [-arrow_length, -arrow_width/2],
+     [-arrow_length,  arrow_width/2]
+  3. Rotate by atan2(dy, dx)
+  4. Translate to [tip_x, tip_y]
+  5. Extrude using linear_extrude(height = arrow_thickness)
+
+Arrow Module Template
+module edge_arrow_triangle(p1, p2) {
+    dx = p2[0] - p1[0];
+    dy = p2[1] - p1[1];
+    angle = atan2(dy, dx);
+    length = sqrt(dx*dx + dy*dy);
+    ux = dx / length;
+    uy = dy / length;
+    tip_x = p2[0] - ux * node_radius;
+    tip_y = p2[1] - uy * node_radius;
+
+    translate([tip_x, tip_y, base_thickness])
+        rotate([0, 0, angle])
+            linear_extrude(height = arrow_thickness)
+                polygon(points=[
+                    [0, 0],
+                    [-arrow_length, -arrow_width / 2],
+                    [-arrow_length,  arrow_width / 2]
+                ]);
+}
+
+Edge Module Example
+edge_cylinder(p1, p2);
+edge_arrow_triangle(p1, p2);
+
+Where p1 and p2 are the scaled and offset [x, y] coordinates of the source and destination nodes, respectively.
+
+
+5. CONSTRUCTION RULES
+- Use a single union() block to combine all geometry.
+- No external includes or dynamic features
+- Ensure:
+  - Printable, manifold geometry
+- No geometry is floating or disconnected.
+  - No intersections between arrow and node
+  - All edge directions are respected
+- Place all module definitions (e.g., edge_cylinder) outside the union.
+  - No unsupported OpenSCAD features (e.g., str(), list comprehensions).
+
+---
+
+OUTPUT FORMAT
+- Output only the complete and self-contained .scad source code.
+- The file must be ready to open in OpenSCAD 2021.01 and render correctly.
+- Save the final script as a downloadable .scad file.
+
+---
+
+### Verification Policy for Geometric and Structural Modeling
+- All aspects of the model must derive strictly from the input data (e.g., node labels, coordinates, edge lists).
+- Do not generate or infer missing geometric information (such as angles, curves, or labels) unless explicitly instructed.
+- If cost values or node metadata are incomplete or ambiguous, request clarification before proceeding.
+- Do not assume or invent values for rendering purposes.
+- All conditional logic (e.g., fallback positions, label orientation, placement tolerances) must be deterministic and verifiable.
+- If any part of the output relies on an assumption, it must be labeled as [Inference] and justified or replaced by a request for clarification
+
+
+
