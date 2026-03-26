@@ -3,7 +3,7 @@ import os
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QTextEdit, QPushButton, QMenuBar, QMenu, 
                              QFileDialog, QFrame, QSizePolicy, QStyle, QStackedWidget)
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from src.ui.panels import GraphFormPanel, TextOnlyPanel
@@ -89,19 +89,34 @@ class LandingWindow(QMainWindow):
         # ======== Menu 'Template' ========
         template_menu = menu_bar.addMenu("&Template")
         
-        # Creiamo le azioni e le colleghiamo alla funzione di switch tramite l'indice del QStackedWidget
+        # Gruppo esclusivo affinché solo un'opzione possa essere spuntata alla volta
+        template_group = QActionGroup(self)
+        template_group.setExclusive(True)
+        
+        # Azioni Checkable e le aggiungiamo al gruppo
         act_flow = QAction("Flow Chart", self)
+        act_flow.setCheckable(True)
         act_flow.triggered.connect(lambda: self.switch_template(0))
+        template_group.addAction(act_flow)
         
         act_dir = QAction("Direct Graph", self)
+        act_dir.setCheckable(True)
         act_dir.triggered.connect(lambda: self.switch_template(1))
+        template_group.addAction(act_dir)
+        # Impostiamo Direct Graph come già spuntato all'avvio (essendo l'indice 1 di default)
+        act_dir.setChecked(True)
         
         act_undir = QAction("Undirect Graph", self)
+        act_undir.setCheckable(True)
         act_undir.triggered.connect(lambda: self.switch_template(2))
+        template_group.addAction(act_undir)
         
         act_set = QAction("Set Theory", self)
+        act_set.setCheckable(True)
         act_set.triggered.connect(lambda: self.switch_template(3))
+        template_group.addAction(act_set)
 
+        # Aggiungiamo le azioni al menu visivo
         template_menu.addActions([act_flow, act_dir, act_undir, act_set])
         
 
