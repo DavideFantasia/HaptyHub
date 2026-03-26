@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-from src.ui.panels import GraphFormPanel, TextOnlyPanel
+from src.ui.panels import GraphFormPanel, FlowChartPanel, SetTheoryPanel
 
 from src.api_client import GeminiClient
 from src.api_client import TestClient # Classe di test senza chiamate API reali
@@ -160,10 +160,10 @@ class LandingWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         
         # Creiamo i 4 pannelli (l'ordine di inserimento definisce l'indice: 0, 1, 2, 3)
-        self.panel_flow = TextOnlyPanel("Flow Chart")           # Indice 0
+        self.panel_flow = FlowChartPanel()                      # Indice 0
         self.panel_dir = GraphFormPanel(is_directed=True)       # Indice 1
         self.panel_undir = GraphFormPanel(is_directed=False)    # Indice 2
-        self.panel_set = TextOnlyPanel("Set Theory")            # Indice 3
+        self.panel_set = SetTheoryPanel()                       # Indice 3
         
         self.stacked_widget.addWidget(self.panel_flow)
         self.stacked_widget.addWidget(self.panel_dir)
