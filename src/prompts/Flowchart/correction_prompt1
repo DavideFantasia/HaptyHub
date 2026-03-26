@@ -1,0 +1,25 @@
+There are errors in the flowchart topology. Specifically:
+1) Missing edge(s) (omitted in your output, but present in the graph):
+- Add the edge: [NODE_U] -> [NODE_V]
+- Add the edge: [NODE_U] -> [NODE_V]
+(If none, remove this part)
+
+2) Extra edge(s) (present in your output, but NOT present in the graph):
+- Remove the edge: [NODE_U] -> [NODE_V]
+- Remove the edge: [NODE_U] -> [NODE_V]
+(If none, remove this part)
+
+3) Wrong direction edge(s) (directionality inverted):
+- The correct edge is: [NODE_U] -> [NODE_V] (NOT [NODE_V] -> [NODE_U])
+- The correct edge is: [NODE_U] -> [NODE_V] (NOT [NODE_V] -> [NODE_U])
+(If none, remove this part)
+
+4) Wrong elbow recognition:
+- The edge [NODE_U] -> [NODE_V] is [not] an elbow.
+- The edge [NODE_U] -> [NODE_V] is [not] an elbow.
+(if none, remove this part)
+
+
+Taking these corrections into account, redo this:
+[PASTE HERE YOUR ORIGINAL PHASE 1 PROMPT]
+——————————————
