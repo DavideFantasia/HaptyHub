@@ -15,10 +15,10 @@ class BaseTemplate(ABC):
         """Restituisce il system prompt per la generazione del codice."""
         pass
 
-    @abstractmethod
+    #Metodo concreto per la lettura da file
     def get_from_file(self, filepath: str) -> str:
-        """Metodo per caricare un prompt da file, se necessario."""
-        pass
+        with open(filepath, 'r', encoding='utf-8') as file:
+            return file.read()
 
 
 class GraphTemplate(BaseTemplate):
@@ -49,11 +49,6 @@ class GraphTemplate(BaseTemplate):
     def get_phase_2(self) -> str:
         self.__prompt2 = self.get_from_file(os.path.join(self.__prompt_path, "phase2.txt"))
         return self.__prompt1+"\n\n"+self.__prompt2
-    
-    def get_from_file(self, filepath: str) -> str:
-        with open(filepath, 'r') as file:
-            return file.read()
-
 
 # --- Le 4 Implementazioni Specifiche ---
 
@@ -88,10 +83,6 @@ class FlowChartTemplate(BaseTemplate):
         self.__prompt2 = self.get_from_file(os.path.join(self.__prompt_path, "phase2.txt"))
         self.__prompt2 = self.__prompt1+"\n\n"+self.__prompt2 # JUST FOR TESTING
         return self.__prompt1+"\n\n"+self.__prompt2
-
-    def get_from_file(self, filepath: str) -> str:
-        with open(filepath, 'r') as file:
-            return file.read()
 
 class SetTheoryTemplate(BaseTemplate):
     def get_phase_1(self) -> str:
