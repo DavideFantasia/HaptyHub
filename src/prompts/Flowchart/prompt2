@@ -1,0 +1,265 @@
+Generate an OpenSCAD script as a downloadable file that creates a 3D-printable model of a flowchart described using logical 2D coordinates (X, Y) of the building blocks.
+---
+
+### CRITICAL COORDINATE ASSUMPTIONS (TO AVOID MAPPING ERRORS)
+
+- You must treat (X, Y) as:
+  - **X = left to right** (horizontal)
+  - **Y = bottom to top** (vertical)
+- Do not reinterpret the coordinate system from your own geometry.
+- Use **only the logical (X, Y)** provided in the previous step.
+
+---
+
+GLOBAL RULES
+The model must be:
+- Be deterministic and structurally accurate.
+- Preserve the visual layout from the coordinate system.
+- Ensure the model is centered and scaled to fit a fixed 200 mm × 200 mm base.
+- Be fully compatible with OpenSCAD 2021.01 (important). 
+- Explicitly declare all computed values like scale, offset, margin.
+- If there are weights you have to represent them, don't skip this thing
+- All edge labels (visible in the image) must be included on the base plane and clearly associated with the corresponding edges. 
+
+- No labels can be omitted. 
+
+- If they are present and if labels are missing, the output is considered invalid. 
+Their position must follow orthogonal offset rules to avoid overlapping with building blocks or arrows. 
+
+---
+
+REQUIREMENTS
+
+1. BASE (FIXED 200 × 200 mm)
+- Generate a flat rectangular base with:
+  - Dimensions: 200 mm × 200 mm
+  - Thickness: at least 3 mm
+  -Color: grey
+- Center the base at the origin (X = 0, Y = 0) in the OpenSCAD workspace.
+- The base must not resize according to the flowchart.
+- Maintain a uniform 10 mm margin between the outermost building block and the edge of the base.
+- Compute the bounding box from the given logical coordinates and calculate:
+  - scale = max uniform scale that fits the flowchart (with margin)
+  - x_offset and y_offset to center the flowchart
+
+2. FLOWCHART SCALING (EXPLICIT)
+- Compute:
+  - min_x, max_x, min_y, max_y from the building block list.
+  - coord_w = max_x - min_x
+  - coord_h = max_y - min_y
+  - flowchart_width, flowchart_height
+  - scale = scale = min((base_size - 2*margin - bb_w) / coord_w, (base_size - 2*margin - bb_d) / coord_h)
+  - x_offset = -((min_x + max_x)/2 * scale)
+  - y_offset = -((min_y + max_y)/2 * scale)
+- Declare:
+  - scale, x_offset, y_offset, and margin as named variables in the code.
+
+
+1. BUILDING BLOCKS 
+  - Represent each building block as its correct geometric figure at its scaled (X, Y) position:
+  - bb_w = 0.8 * scale
+  - bb_d = 0.4 * scale
+  - bb_h = 5mm
+  
+  module shape_rectangle() {
+    square([bb_w, bb_d], center=true);
+}
+
+module shape_oval() {
+    // Stretches a circle to fill the bb_w x bb_d footprint
+    scale([bb_w / bb_d, 1]) 
+        circle(d = bb_d, $fn=64);
+}
+
+module shape_diamond() {
+    // Points touch the exact midpoints of the bounding box edges
+    polygon(points=[[0, bb_d/2], [bb_w/2, 0], [0, -bb_d/2], [-bb_w/2, 0]]);
+}
+
+module shape_rhomboid() {
+    // Slanted parallelogram using 15% of width as the offset
+    slant = bb_w * 0.15;
+    polygon(points=[
+        [-bb_w/2 + slant,  bb_d/2], 
+        [ bb_w/2 + slant,  bb_d/2], 
+        [ bb_w/2 - slant, -bb_d/2], 
+        [-bb_w/2 - slant, -bb_d/2]
+    ]);
+}
+
+- Add a text (the building block content) engraved or embossed at the center-top of each rectangle:
+  - Use text() and linear_extrude()
+  - Align using halign = "center" and valign = "center"
+  - Set content height = 1.5 mm
+  - Color: black 
+  - Ensure the content is fused to the building block rectangle
+  - Text Safety: txt_size = min(bb_d * 0.35, (bb_w * padding_factor) / len(label)). This prevents text from overflowing the width of the box.
+  - In case of the diamond consider that the available space is much smaller than the other shapes, reduce the  
+
+2. EDGES (Directed Connections with Arrowheads)
+
+Each edge consists of:
+- A semi-cylinder representing the edge shaft(which can include elbows if they help with overlapping or if they are provided by the description)
+- A flat triangle arrowhead, engraved on the base, pointing to the target building block
+
+
+To ensure the gaps are independent of the shape but relative to the bounding box of the dimensions bb_w and bb_d:
+- Define a helper function to calculate the radial distance from the center to the edge of the bounding rectangle at a specific angle:
+function get_gap(a, w, d) = (w/2 * d/2) / sqrt(pow(d/2 * cos(a), 2) + pow(w/2 * sin(a), 2));
+
+- Each edge must:
+  - Lie on top of the base at Z = base_thickness
+  - Use radius: edge_radius = 1.5;
+- Use this module:
+
+module edge_cylinder_full(p1, p2) {
+    dx = p2[0] - p1[0];
+    dy = p2[1] - p1[1];
+    dist = sqrt(dx*dx + dy*dy);
+    angle = atan2(dy, dx);
+    
+    // Apply BOTH gaps to a single cylinder
+    start_gap = get_gap(angle, bb_w, bb_d);
+    end_gap = get_gap(angle + 180, bb_w, bb_d) + arrow_length;
+    
+    shortened_length = dist - start_gap - end_gap;
+    
+    if (shortened_length > 0) {
+        ux = dx / dist;
+        uy = dy / dist;
+        startX = p1[0] + ux * start_gap;
+        startY = p1[1] + uy * start_gap;
+
+        translate([startX, startY, base_thickness])
+            rotate([0, 0, angle])
+                rotate([0, 90, 0])
+                    cylinder(h = shortened_length, r = edge_radius, $fn=32);
+    }
+}
+
+
+To ensure seamless connections at elbows, define and use a sphere module:
+module edge_elbow_sphere(p) {
+    v = scale_p(p);
+    translate([v[0], v[1], base_thickness])
+        sphere(r = edge_radius, $fn=32);
+}
+
+
+For any edge that is a single straight line (no elbows), the "start" and "end" rules must be applied to the same cylinder call
+
+
+Edge Shortening (for Arrowhead Placement)
+To leave space for the arrow without intersecting the building block:
+- edge_segment_start(p1, p2): Used only for the first segment leaving a node. Applies start_gap but NO end_gap.
+- edge_segment_mid(p1, p2): Used for segments between two elbows. Applies NO gaps at all.
+- edge_segment_end(p1, p2): Used for the final segment entering a node. Applies end_gap (to accommodate the arrow) but NO start_gap.
+
+In case of 2 segments elbow edges:
+- edge_segment_start(p1, p2): Used only for the first segment leaving a node. Applies start_gap but NO end_gap. 
+- edge_segment_end(p1, p2): Used for the final segment entering a node. Applies end_gap (to accommodate the arrow) but NO start_gap.
+
+CRITICAL: Place an edge_elbow_sphere(p_elbow) at every coordinate point where two segments meet (the elbow vertex). This "fills" the intersection and ensures a manifold, 3D-printable joint
+
+in case of Direct edges (no elbow):
+- edge_segment_end(p1, p2): Used for the final segment entering a node. Applies end_gap (to accommodate the arrow) but NO start_gap.
+
+
+Edge Weight Text (Embossed on the Base)
+- Must appear as text at `Z = base_thickness`, **not above or on top of the edge**
+- Positioned **slightly to the side of the edge**, orthogonally offset from midpoint, but ensuring **NO** overlap with the edge
+- Position edge labels (weights) at the midpoint of the **longest** segment of an edge.
+- Position them always parallel to the corresponding edge.
+- If the edge angle is between 90 and 270 degrees, rotate the label an additional 180 degrees to ensure it remains right-side up.
+
+Edge Shaft Geometry
+- Cylinder radius: edge_radius = 1.5;
+- Position: centered on the shortened vector
+- Rotation: atan2(dy, dx) (from source to target)
+- Length: distance - arrow_gap
+
+Arrowhead Geometry
+Each arrow is defined as a flat isosceles triangle, extruded vertically:
+- Base width: arrow_width = min(bb_d * 0.9, 10);
+- Height (length): arrow_length = min(bb_d * 0.8, 12);
+- Extrusion height: arrow_thickness = "like the radius of the edge "
+- Drawn in 2D at origin and transformed as follows:
+  1. Tip positioned at: tip = p2 - unit_vector * building_block_depth
+  2. Triangle defined with points:
+     [0, 0],
+     [-arrow_length, -arrow_width/2],
+     [-arrow_length,  arrow_width/2]
+  3. Rotate by atan2(dy, dx)
+  4. Translate to [tip_x, tip_y]
+  5. Extrude using linear_extrude(height = arrow_thickness)
+
+Arrow Module Template
+module edge_arrow_triangle(p1, p2) {
+    dx = p2[0] - p1[0];
+    dy = p2[1] - p1[1];
+    angle = atan2(dy, dx);
+    dist = sqrt(dx*dx + dy*dy);
+    ux = dx / dist;
+    uy = dy / dist;
+    
+    // Tip stops exactly at the building block boundary
+gap_dist = get_gap(angle + 180, bb_w, bb_d);
+tip_x = p2[0] - ux * gap_dist;
+tip_y = p2[1] - uy * gap_dist;
+
+    translate([tip_x, tip_y, base_thickness])
+        rotate([0, 0, angle])
+            linear_extrude(height = edge_radius) // Matches edge thickness
+                polygon(points=[
+                    [0, 0],
+                    [-arrow_length, -arrow_width / 2],
+                    [-arrow_length,  arrow_width / 2]
+                ]);
+}
+
+Edge Module Example
+edge_cylinder(p1, p2);
+edge_arrow_triangle(p1, p2);
+
+Where p1 and p2 are the scaled and offset [x, y] coordinates of the source and destination nodes, respectively.
+
+For multi-segment (elbow) edges, do not use manual rotations like rotate([0, 90, 90]). Instead, define the elbow using intermediate coordinate points (e.g., p_elbow1, p_elbow2) and call the edge_cylinder(p1, p2) module for each segment. This ensures that the atan2 logic automatically handles the direction based on the vector between the two points.
+
+
+1. CONSTRUCTION RULES
+- Use a single union() block to combine all geometry.
+- No elements outside the 200mm x 200mm base.
+- Verify that the correct number of edges are created, and that every edge that has elbows is composed by 2 or 3 segments, depending on the description.
+- No external includes or dynamic features
+- Ensure:
+  - Printable, manifold geometry
+- No geometry is **floating** or disconnected.
+  - No intersections between arrow and building blocks
+  - All edge directions are respected
+- Place all module and **function** definitions (e.g., edge_cylinder) outside the union.
+  - No unsupported OpenSCAD features (e.g., str(), list comprehensions).
+ - No text inside a building block is bigger than the building block geometry, causing it to float.
+ - Do not put functions and modules inside union
+ - Do not use any 3D shapes, only extruded 2D ones.
+ - Do not touch the scale of the building blocks.
+ 
+
+---
+
+OUTPUT FORMAT
+- Output only the complete and self-contained .scad source code.
+- The file must be ready to open in OpenSCAD 2021.01 and render correctly.
+- Save the final script as a downloadable .scad file.
+- Do **NOT** output any python code, only scad.
+
+---
+
+### Verification Policy for Geometric and Structural Modeling
+- All aspects of the model must derive strictly from the input data (e.g., building block labels, coordinates, edge lists).
+- Do not generate or infer missing geometric information (such as angles, curves, labels or contents) unless explicitly instructed.
+- If content values or building block metadata are incomplete or ambiguous, request clarification before proceeding.
+- Do not assume or invent values for rendering purposes.
+- The "gap" calculation treats all shapes as bounded by the same rectangle to ensure consistency and prevent intersection.
+- All conditional logic (e.g., fallback positions, label orientation, placement tolerances) must be deterministic and verifiable.
+- If any part of the output relies on an assumption, it must be labeled as [Inference] and justified or replaced by a request for clarification.
+- Before outputting the file check that all modules and functions are outside the union, no exceptions [IMPORTANT].

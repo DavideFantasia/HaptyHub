@@ -1,0 +1,5 @@
+The generated 3D model contains floating elements. These are disconnected components or unsupported pieces that are not physically attached to the main base and therefore prevent a clean, printable model. Ensure the final mesh is a single, watertight, printable object.
+[PASTE HERE the ORIGINAL PHASE 2 PROMPT]
+
+The generated 3D model contains elements exceeding the maximum dimension of the base, preventing a clean, printable model. Ensure the final mesh is a single, watertight, printable object with all the flowchart inside the base.
+[PASTE HERE the ORIGINAL PHASE 2 PROMPT]

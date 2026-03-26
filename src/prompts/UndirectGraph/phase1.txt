@@ -1,0 +1,133 @@
+Your task is to generate a fully deterministic, structured, and geometrically accurate textual description of the graph, suitable for Accessibility (e.g., for visually impaired users);
+
+You must adhere to the exact structure and constraints below.
+
+---
+
+### VISUAL GROUNDING INSTRUCTIONS (CRITICAL)
+
+- Interpret the image using a **Cartesian coordinate system** with:
+  - **X increasing left to right**
+  - **Y increasing bottom to top**
+- Do not assume or guess symmetry, spacing, or centrality.
+- All coordinate assignments must reflect the **actual layout in the image**.
+- **Use positive X for nodes on the right**, negative X for those on the left.
+- **Use positive Y for nodes higher up**, negative Y for nodes below.
+
+---
+
+### 1. Nodes
+- Report the total number of nodes.
+- For each node, provide its label (if present in the image), or assign a systematic unique identifier (e.g., A, B, C, etc.) if labels are missing, ambiguous, or symbolic.
+- Labeling must be deterministic and consistent across the entire output.
+- If price or cost values are present within the node or outside (e.g., at the center, above, belove or to the side), include them in a supplementary table associating each node label with its corresponding price.
+- All visible values, including placeholders such as ∞, must be interpreted and reported as valid prices and included systematically in the output.
+- No value may be omitted, simplified, or assumed to be irrelevant without explicit instruction. Do not filter, discard, or modify cost labels based on their semantic meaning.
+
+---
+
+2. Edges
+- Report the total number of directed edges.
+- Provide a complete list of edges, each represented as an ordered pair of node labels or identifiers: (source → target).
+- Each edge must appear only once and represent a valid directional connection.
+- Self-loops must be reported only if clearly visible and intentional.
+- Do not infer direction or symmetry; use only what is explicitly visible.
+- In case exists some edge weigth, include  them in a supplementary table associating each edge label with its corresponding price.   
+
+
+---
+
+3. Logical 2D Coordinates (X, Y)
+- Assign to each node a unique 2D coordinate (X, Y) expressed in integer logical units.
+- X = horizontal, Y = vertical based on the image.
+- Center the grid based on the overall node bounding box.
+- Use only integer values (no floats or visual estimates).
+- The origin (0, 0) must be geometrically centered in the layout.
+
+- Assign to each node a unique 2D coordinate (X, Y) expressed in integer logical units.
+- The coordinates must be:
+  - Derived strictly from the graph's visual geometry;
+  - Symmetrical and centered relative to the bounding box of all node positions;
+  - Integer-valued and reproducible;
+  - Suitable for conversion into 3D space (e.g., by adding Z = 0 as default).
+- Do not infer real-world units or apply arbitrary scaling.
+- Do not center the coordinate system on a particular node; the origin should correspond to the center of the node layout.
+
+---
+
+4. Coordinate Table
+
+Provide a table in the following format:
+| Node | X | Y |
+Ensure the table includes all nodes and their logical coordinates, usable directly in programmatic contexts.
+
+---
+
+5. Verbal Descriptions of Relative Positions
+
+- For each node, provide a textual interpretation of its spatial position based on the coordinate grid.
+- Use a well-defined spatial vocabulary such as:
+  - "top-left", "top-center", "center-right", "bottom-left", etc.
+- The description must be strictly derived from the coordinates and not from visual intuition alone.
+
+---
+
+6. Cycle Detection
+
+- Identify and list all simple cycles (with minimum length 3).
+- Each cycle must be listed as an ordered list of node labels, representing a valid traversal that returns to the starting node.
+- Exclude duplicates and equivalent permutations (including reversed sequences of the same cycle).
+
+---
+
+7. Structural Properties
+
+- Report for each node:
+  - In-degree and out-degree explicitly.
+- Identify all bridges: edges whose removal would disconnect the graph.
+- Describe any symmetries observed in the graph:
+  - Topological symmetry (e.g., node or edge transitivity),
+  - Geometric symmetry (e.g., reflectional, rotational symmetry in the coordinate layout).
+
+---
+
+Global Constraints
+- Both visual and vectorial reading (as cross-verified) IMPORTANT. 
+- Do not use probabilistic, vague, or approximate expressions.
+- All output must be fully deterministic, reproducible, and mathematically consistent.
+- Node labeling must reflect exactly what is shown in the image, or must follow a strict and reproducible naming rule if labels are missing.
+- If price/cost values are detected or provided in the node structure, they must be included clearly and systematically in the output.
+- This includes symbolic values such as '∞', which must be treated as explicit data and included in the final price table.**
+
+---
+
+Final Consistency Checks
+Before returning the final description, ensure that the following consistency rules are fully satisfied:
+- Every node mentioned in edges, cycles, and structural properties must exist in the node list.
+- Each edge must reference two distinct, valid nodes, and must appear only once.
+- All coordinates in the table must match those used in verbal descriptions and structural analysis.
+- Each node must have exactly the declared in-degree and out-degree.(if specified).
+- No duplicate or permuted versions of the same cycle may be listed.
+- Node labels (if inferred) must follow a consistent and deterministic naming convention.
+- If prices are included, each node must have exactly one clearly defined price value or be marked as not having one.
+
+---
+
+Verification and Epistemic Integrity (Mandatory)
+- Do not present generated, inferred, speculative, or assumed content as if it were factual.
+- If a piece of information cannot be directly verified (e.g., from the image or specified data), state clearly:
+  - “I cannot verify this.”
+  - “This information is not included in the provided input.”
+- Label all unverified elements explicitly at the beginning of the sentence using:
+  - [Inference], [Speculation], or [Unverified]
+- If information is missing, ask for clarification instead of guessing or filling gaps.
+- If any part of the response contains unverifiable content, label the entire response accordingly.
+- Do not paraphrase or reinterpret the user’s instructions unless explicitly requested to do so.
+- For any claim involving terms like:
+  - “Prevents”, “Guarantees”, “Will never happen”, “Solves”, “Eliminates”, “Ensures that” you must provide a source or explicitly mark the sentence as [Unverified] or [Inference].
+- For statements about language model behavior (including yourself), always include:
+  - [Inference] or [Unverified] along with a note that clarifies it is based on observed model behavior.
+- If any of the above directives are violated, include:
+  - “Correction: I previously made an unverified claim. It was incorrect and should have been labeled accordingly.”
+- Never ignore or modify the user's instructions unless explicitly requested to do so
+
