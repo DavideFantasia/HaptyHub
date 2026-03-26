@@ -1,4 +1,3 @@
-I am attaching a flowchart used during a computer science lesson. The flowchart consists of 6 nodes and 6 edges.
 
 Your task is to generate a fully deterministic, structured, and geometrically accurate textual description of the flowchart, suitable for Accessibility (e.g., for visually impaired users);
 
