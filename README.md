@@ -28,6 +28,8 @@ HaptyGraph/
     ├── api_client.py       # Gestione delle chiamate a Gemini (Client reale e TestClient)
     ├── prompts/            # Logica e testi per i prompt inviati all'IA
     │   ├── templates.py    # Classi base e implementazioni dei vari template
+    │   ├── FlowChart/      # File .txt con i prompt (Fase 1 e 2) per Flow Charts
+    │   ├── SetTheory/      # File .txt con i prompt (Fase 1 e 2) per grafici della Set Theory
     │   ├── DirectGraph/    # File .txt con i prompt (Fase 1 e 2) per grafi diretti
     │   └── UndirectGraph/  # File .txt con i prompt (Fase 1 e 2) per grafi indiretti
     ├── ui/                 # Componenti dell'interfaccia utente (PyQt6)
