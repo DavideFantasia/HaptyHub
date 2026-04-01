@@ -55,6 +55,54 @@ class GeminiWorker(QThread):
         except Exception as e:
             self.error.emit(f"Errore API: {str(e)}")
 
+# --- Widget personalizzato per il drag and drop dell'immagine ---
+# Sottoclasse della label di preview per gestire il drag and drop dei file immagine direttamente sulla preview stessa
+class ImageDropLabel(QLabel):
+    # Segnali personalizzati
+    imageDropped = pyqtSignal(str)
+    clicked = pyqtSignal()  # Nuovo segnale per il click
+
+    def __init__(self, text=""):
+        super().__init__(text)
+        # Abilita esplicitamente il drag and drop su questo widget
+        self.setAcceptDrops(True)
+        # Cambia il cursore nella classica "manina" per indicare che è cliccabile
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event):
+        """Gestisce il click del mouse sul widget."""
+        # Se viene premuto il tasto sinistro, emetti il segnale
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+    def dragEnterEvent(self, event):
+        """Controlla cosa sta entrando nell'area del widget."""
+        if event.mimeData().hasUrls():
+            url = event.mimeData().urls()[0]
+            if url.isLocalFile():
+                file_path = url.toLocalFile()
+                ext = os.path.splitext(file_path)[1].lower()
+                # Accetta solo se è un'immagine supportata
+                if ext in ['.png', '.jpg', '.jpeg', '.bmp']:
+                    event.acceptProposedAction()
+                    # Cambiamo un po' lo stile per dare feedback visivo
+                    self.setStyleSheet("border: 2px solid #4CAF50; background-color: #e8f5e9;")
+                    return
+        event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """Ripristina lo stile se l'utente esce dall'area senza droppare."""
+        self.setStyleSheet("") # Ripristina lo stile CSS predefinito assegnato dalla finestra
+
+    def dropEvent(self, event):
+        """Gestisce il rilascio effettivo del file."""
+        self.setStyleSheet("") # Ripristina lo stile
+        url = event.mimeData().urls()[0]
+        file_path = url.toLocalFile()
+        # Emette il segnale con il percorso, che verrà catturato dalla finestra principale
+        self.imageDropped.emit(file_path)
+
 class LandingWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -132,24 +180,25 @@ class LandingWindow(QMainWindow):
     def _setup_layout(self):
         """Costruisce le colonne sinistra (immagine) e destra (prompt) come nello schizzo."""
         
+        """Costruisce le colonne sinistra (immagine) e destra (prompt) come nello schizzo."""
+        
         # --- COLONNA SINISTRA (Immagine) ---
         self.left_col_layout = QVBoxLayout()
-        self.main_layout.addLayout(self.left_col_layout, stretch=1) # stretch=1 dà peso uguale alle colonne
+        self.main_layout.addLayout(self.left_col_layout, stretch=1)
 
-        # 1. Box di preview per l'immagine
-        self.img_preview_label = QLabel("PREVIEW IMG")
-        self.img_preview_label.setObjectName("img_preview") # Per lo styling CSS
+        # --- Box di preview per l'immagine ---
+        # Aggiornato il testo per spiegare entrambe le interazioni
+        self.img_preview_label = ImageDropLabel("PREVIEW IMG\n\n(Clicca qui o trascina un'immagine)")
+        self.img_preview_label.setObjectName("img_preview")
         self.img_preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.img_preview_label.setMinimumSize(400, 300)
-        # Assicurati che si espanda ma mantenga le proporzioni
         self.img_preview_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
+        # Colleghiamo sia il drop che il click ai rispettivi metodi
+        self.img_preview_label.imageDropped.connect(self._process_image_file)
+        self.img_preview_label.clicked.connect(self.handle_choose_file)
+        
         self.left_col_layout.addWidget(self.img_preview_label, stretch=1)
-
-        # 2. Pulsante sottostante per la scelta dell'immagine
-        self.choose_file_btn = QPushButton("choose a file")
-        self.choose_file_btn.setMinimumHeight(40)
-        self.choose_file_btn.clicked.connect(self.handle_choose_file)
-        self.left_col_layout.addWidget(self.choose_file_btn)
 
 
         # --- COLONNA DESTRA (Prompt Dinamico) ---
@@ -250,23 +299,29 @@ class LandingWindow(QMainWindow):
 
     def handle_choose_file(self):
         """Apre un dialogo per scegliere un file immagine e lo visualizza."""
-        file_path, _ = QFileDialog.getOpenFileName(self, "Scegli un'immagine per lo schema", 
-                                                   "", "Immagini (*.png *.jpg *.jpeg *.bmp)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Scegli un'immagine per lo schema", "", "Immagini (*.png *.jpg *.jpeg *.bmp)"
+        )
         if file_path:
-            # Salva il path per l'uso futuro (invio API)
-            self.current_image_path = file_path
-            
-            # Carica e scala l'immagine per la preview
-            pixmap = load_and_scale_image(file_path, 
-                                          self.img_preview_label.width(), 
-                                          self.img_preview_label.height())
-            if pixmap:
-                # Imposta l'immagine e rimuovi il testo segnaposto
-                self.img_preview_label.setPixmap(pixmap)
-                self.img_preview_label.setText("") # Rimuovi testo se c'è
-            else:
-                self.img_preview_label.setText("Errore nel caricamento dell'immagine")
-                self.current_image_path = None
+            self._process_image_file(file_path)
+
+    def _process_image_file(self, file_path):
+        """Elabora il file immagine (da pulsante o da drop) e lo mostra nella UI."""
+        self.current_image_path = file_path
+        
+        # Carica e scala l'immagine per la preview
+        pixmap = load_and_scale_image(
+            file_path, 
+            self.img_preview_label.width(), 
+            self.img_preview_label.height()
+        )
+        
+        if pixmap:
+            self.img_preview_label.setPixmap(pixmap)
+            # Rimuoviamo il testo "PREVIEW IMG..." o mostriamo un errore invisibile
+        else:
+            self.img_preview_label.setText("Errore nel caricamento dell'immagine")
+            self.current_image_path = None
 
     def handle_send_to_gemini(self):
         image_path = self.current_image_path
