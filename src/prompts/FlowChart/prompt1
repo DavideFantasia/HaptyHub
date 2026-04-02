@@ -1,0 +1,151 @@
+I am attaching a flowchart used during a computer science lesson. The flowchart consists of 6 nodes and 6 edges.
+
+Your task is to generate a fully deterministic, structured, and geometrically accurate textual description of the flowchart, suitable for Accessibility (e.g., for visually impaired users);
+
+You must adhere to the exact structure and constraints below.
+
+---
+
+### VISUAL GROUNDING INSTRUCTIONS (CRITICAL)
+
+- Interpret the image using a **Cartesian coordinate system** with:
+  - **X increasing left to right**
+  - **Y increasing bottom to top**
+- Do not assume or guess symmetry, spacing, or centrality.
+- All coordinate assignments must reflect the **actual layout in the image**.
+- **Use positive X for nodes on the right**, negative X for those on the left.
+- **Use positive Y for nodes higher up**, negative Y for nodes below.
+
+---
+
+### 1. Building Blocks
+- Report the total number of building blocks.
+- For each building block,provide a label and its content (if present in the image), and assign a systematic unique identifier (e.g., A, B, C, etc.) for the labels.
+- The contents and labels must be deterministic and consistent across the entire output.
+- If contents are present within a building block or outside (e.g., at the center, above, below or to the side), include them in a supplementary table associating each building block with its corresponding content, but using braille symbols.
+- All visible values, including placeholders such as ∞, must be interpreted and reported as valid content and included systematically in the output.
+- No value may be omitted, simplified, or assumed to be irrelevant without explicit instruction. Do not filter, discard, or modify content based on their semantic meaning.
+
+---
+
+1. Edges
+- Report the total number of directed edges.
+- Provide a complete list of edges, each represented as an ordered pair of building blocks labels or identifiers: (source → target).
+- Provide a complete list of edges with elbows, and the direction of the elbows.
+- Any edge with a sharp corner has to be considered an elbow, otherwise consider it as a straight edge.
+- Each edge must appear only once and represent a valid directional connection.
+- Self-loops must be reported only if clearly visible and intentional.
+- Do not infer direction or symmetry; use only what is explicitly visible.
+- In case exists some edge label, include  them in a supplementary table associating each edge label with its corresponding label.   
+
+
+
+---
+
+1. Logical 2D Coordinates (X, Y)
+- Assign to each building block a unique 2D coordinate (X, Y) expressed in integer logical units.
+- X = horizontal, Y = vertical based on the image.
+- Center the grid based on the overall building block bounding box.
+- Use only integer values (no floats or visual estimates).
+- The origin (0, 0) must be geometrically centered in the layout.
+
+
+-Assign to each elbow of an edge a unique 2D coordinate (X, ) expressed in integer logical units.
+- X = horizontal, Y = vertical based on the image.
+- Use only integer values (no floats or visual estimates).
+- The coordinates must be:
+  - Derived strictly from the flowchart's visual geometry;
+   - Integer-valued and reproducible;
+   - Do not infer real-world units or apply arbitrary scaling.
+
+- Assign to each building block a unique 2D coordinate (X, Y) expressed in integer logical units.
+- The coordinates must be:
+  - Derived strictly from the flowchart's visual geometry;
+  - Symmetrical and centered relative to the bounding box of all building block positions;
+  - Integer-valued and reproducible;
+  - Suitable for conversion into 3D space (e.g., by adding Z = 0 as default).
+- Do not infer real-world units or apply arbitrary scaling.
+- Do not center the coordinate system on a particular building block; the origin should correspond to the center of the building block layout.
+
+---
+
+4. Coordinate Table
+
+Provide a table in the following format:
+| Building Block | X | Y |
+Ensure the table includes all building blocks and their logical coordinates, usable directly in programmatic contexts.
+
+Provide a table in the following format:
+| Edge Elbow | X | Y |
+Ensure the table includes all Edge Elbow and their logical coordinates, usable directly in programmatic contexts.
+
+Provide a table in the following format:
+| Edge | Exit Direction | Enter Direction |
+Ensure the table includes all Edge  directions, usable directly in programmatic contexts.
+
+
+---
+
+5. Verbal Descriptions of Relative Positions
+
+- For each building block, provide a textual interpretation of its spatial position based on the coordinate grid.
+- Use a well-defined spatial vocabulary such as:
+  - "top-left", "top-center", "center-right", "bottom-left", etc.
+- The description must be strictly derived from the coordinates and not from visual intuition alone.
+
+- For each edge elbow, provide a textual interpretation of its spatial position based on the coordinate grid.
+- Use a well-defined spatial vocabulary such as:
+  - "top-left", "top-center", "center-right", "bottom-left", etc.
+- The description must be strictly derived from the coordinates and not from visual intuition alone.
+
+---
+
+1. Structural Properties
+
+- Report for each building block:
+  - In-degree and out-degree explicitly.
+- Identify all bridges: edges whose removal would disconnect the flowchart.
+- Describe any symmetries observed in the flowchart:
+  - Topological symmetry (e.g., building block or edge transitivity),
+  - Geometric symmetry (e.g., reflectional, rotational symmetry in the coordinate layout).
+
+---
+
+Global Constraints
+- Both visual and vectorial reading (as cross-verified) IMPORTANT. 
+- Do not use probabilistic, vague, or approximate expressions.
+- All output must be fully deterministic, reproducible, and mathematically consistent.
+- Building block labeling must reflect exactly what is shown in the image, or must follow a strict and reproducible naming rule if labels are missing.
+- If contents are detected or provided in the building block structure, they must be included clearly and systematically in the output.
+- This includes symbolic values such as '∞', which must be treated as explicit data and included in the final content table.**
+- The only possible shapes that you should use are CIRCLE, PARALLELOGRAM, DIAMOND and RECTANGLE, do not use any other shape.
+
+---
+
+Final Consistency Checks
+Before returning the final description, ensure that the following consistency rules are fully satisfied:
+- Every building block mentioned in edges and structural properties must exist in the building block list.
+- Each edge must reference two distinct, valid building block, and must appear only once.
+- All coordinates in the table must match those used in verbal descriptions and structural analysis.
+- Each building block must have exactly the declared in-degree and out-degree.(if specified).
+- building block labels (if inferred) must follow a consistent and deterministic naming convention.
+
+---
+
+Verification and Epistemic Integrity (Mandatory)
+- Do not present generated, inferred, speculative, or assumed content as if it were factual.
+- If a piece of information cannot be directly verified (e.g., from the image or specified data), state clearly:
+  - “I cannot verify this.”
+  - “This information is not included in the provided input.”
+- Label all unverified elements explicitly at the beginning of the sentence using:
+  - [Inference], [Speculation], or [Unverified]
+- If information is missing, ask for clarification instead of guessing or filling gaps.
+- If any part of the response contains unverifiable content, label the entire response accordingly.
+- Do not paraphrase or reinterpret the user’s instructions unless explicitly requested to do so.
+- For any claim involving terms like:
+  - “Prevents”, “Guarantees”, “Will never happen”, “Solves”, “Eliminates”, “Ensures that” you must provide a source or explicitly mark the sentence as [Unverified] or [Inference].
+- For statements about language model behavior (including yourself), always include:
+  - [Inference] or [Unverified] along with a note that clarifies it is based on observed model behavior.
+- If any of the above directives are violated, include:
+  - “Correction: I previously made an unverified claim. It was incorrect and should have been labeled accordingly.”
+- Never ignore or modify the user's instructions unless explicitly requested to do so.
