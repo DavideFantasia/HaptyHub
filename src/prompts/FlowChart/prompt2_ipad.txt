@@ -15,7 +15,7 @@ GLOBAL RULES
 The model must be:
 - Be deterministic and structurally accurate.
 - Preserve the visual layout from the coordinate system.
-- Ensure the model is centered and scaled to fit a fixed 200 mm × 200 mm base.
+- Ensure the model is centered and scaled to fit a fixed 130 mm × 200 mm base.
 - Be fully compatible with OpenSCAD 2021.01 (important). 
 - Explicitly declare all computed values like scale, offset, margin.
 - If there are weights you have to represent them, don't skip this thing
@@ -30,72 +30,76 @@ Their position must follow orthogonal offset rules to avoid overlapping with bui
 
 REQUIREMENTS
 
-1. BASE (FIXED 200 × 200 mm)
+1. BASE (FIXED 130 × 200 mm)
 - Generate a flat rectangular base with:
-  - Dimensions: 200 mm × 200 mm
-  - Thickness: at least 3 mm
+  - Dimensions: 130 mm × 200 mm
+  - base_thickness = 3 mm
   -Color: grey
 - Center the base at the origin (X = 0, Y = 0) in the OpenSCAD workspace.
+use the following:
+	translate([0, 0, 0]) cube([base_width, base_height, base_thickness], center=false);
 - The base must not resize according to the flowchart.
-- Maintain a uniform 10 mm margin between the outermost building block and the edge of the base.
-- Compute the bounding box from the given logical coordinates and calculate:
-  - scale = max uniform scale that fits the flowchart (with margin)
-  - x_offset and y_offset to center the flowchart
+- Maintain a uniform 10 mm margin between the outermost building block or elbow and the edge of the base.
+- Declare the constants: base_width = 130; and base_height = 200;
 
-2. FLOWCHART SCALING (EXPLICIT)
-- Compute:
-  - min_x, max_x, min_y, max_y from the building block list.
-  - coord_w = max_x - min_x
-  - coord_h = max_y - min_y
-  - flowchart_width, flowchart_height
-  - scale = scale = min((base_size - 2*margin - bb_w) / coord_w, (base_size - 2*margin - bb_d) / coord_h)
-  - x_offset = -((min_x + max_x)/2 * scale)
-  - y_offset = -((min_y + max_y)/2 * scale)
-- Declare:
-  - scale, x_offset, y_offset, and margin as named variables in the code.
+2. GRID AND FIXED DIMENSIONS (EXPLICIT)
+- The sizes of the building blocks are strictly fixed. Do not calculate a scale for their size.
+- min_x, max_x, min_y, max_y from the building block list and edge elbow list.
+- Declare the following constants:
+	- block_size = 15;
+	- radius_circle = 7.5; // Your new requirement
+	- radius_square = 15 / 2; // 7.5mm
+	- radius_diamond = 7.5 mm (Center to corner)
+	- radius_trapezoid = 10; // Adjusted for the slant overflow
+
+// Calculate spacing dynamically to ensure no overflow on 130x200 base
+grid_spacing = min((base_width - 20) / max(1, (max_x - min_x)), 
+                   (base_height - 20) / max(1, (max_y - min_y)));
+  - outline_thickness = 1;
+  - bb_h = 5;
+- To center the flowchart on the base, compute the logical bounding box (min_x, max_x, min_y, max_y) and calculate the center offsets:
+  - x_offset = -((min_x + max_x) / 2 * grid_spacing);
+  - y_offset = -((min_y + max_y) / 2 * grid_spacing);
+- Function for positioning: function scale_p(p) = [p[0] * grid_spacing + x_offset, p[1] * grid_spacing + y_offset];
+
+
 
 
 1. BUILDING BLOCKS 
-  - Represent each building block as its correct geometric figure at its scaled (X, Y) position:
-  - bb_w = 1 * scale
-  - bb_d = 0.5 * scale
-  - bb_h = 5mm
-  - outline_thic	kness = 1 mm;
-  
- module shape_rectangle() {
+
+All the building blocks need to be positioned at Z= base_thickness [IMPORTANT]
+
+ module shape_square() {
     difference() {
-        square([bb_w, bb_d], center=true);
+        square([block_size, block_size], center=true);
         offset(delta = -outline_thickness) 
-            square([bb_w, bb_d], center=true);
+            square([block_size, block_size], center=true);
     }
 }
 
-module shape_oval() {
+module shape_circle() {
     difference() {
-        scale([bb_w / bb_d, 1]) 
-            circle(d = bb_d, $fn=64);
+        circle(d = block_size, $fn=64);
         offset(delta = -outline_thickness) 
-            scale([bb_w / bb_d, 1]) 
-                circle(d = bb_d, $fn=64);
+            circle(d = block_size, $fn=64);
     }
 }
 
 module shape_diamond() {
-    points = [[0, bb_d/2], [bb_w/2, 0], [0, -bb_d/2], [-bb_w/2, 0]];
     difference() {
-        polygon(points=points);
+        rotate([0, 0, 45]) square([block_size, block_size], center=true);
         offset(delta = -outline_thickness) 
-            polygon(points=points);
+            rotate([0, 0, 45]) square([block_size, block_size], center=true);
     }
 }
 
-module shape_rhomboid() {
-    slant = bb_w * 0.15;
+module shape_trapezoid() {
+    slant = block_size * 0.1; // 10% inclination
     points = [
-        [-bb_w/2 + slant,  bb_d/2], 
-        [ bb_w/2 + slant,  bb_d/2], 
-        [ bb_w/2 - slant, -bb_d/2], 
-        [-bb_w/2 - slant, -bb_d/2]
+        [-block_size/2 + slant,  block_size/2], 
+        [ block_size/2 + slant,  block_size/2], 
+        [ block_size/2 - slant, -block_size/2], 
+        [-block_size/2 - slant, -block_size/2]
     ];
     difference() {
         polygon(points=points);
@@ -106,7 +110,6 @@ module shape_rhomboid() {
 
 
 
-
 2. EDGES (Directed Connections with Arrowheads)
 
 Each edge consists of:
@@ -114,68 +117,17 @@ Each edge consists of:
 - A flat triangle arrowhead, engraved on the base, pointing to the target building block
 
 
-To ensure the gaps are independent of the shape but relative to the bounding box of the dimensions bb_w and bb_d:
-- Define a helper function to calculate the radial distance from the center to the edge of the bounding rectangle at a specific angle:
-function get_gap(a, w, d) = (w/2 * d/2) / sqrt(pow(d/2 * cos(a), 2) + pow(w/2 * sin(a), 2));
+To ensure the edges do not overlap with the shapes:
 
+   -Define a fixed gap variable to keep edges outside the shapes:
+  - shape_radius = (block_size / 2) + 1; 
+  
 - Each edge must:
-  - Lie on top of the base at Z = base_thickness
   - Use radius: edge_radius = 1.5;
-- Use this module:
 
-module edge_cylinder_full(p1, p2) {
-    dx = p2[0] - p1[0];
-    dy = p2[1] - p1[1];
-    dist = sqrt(dx*dx + dy*dy);
-    angle = atan2(dy, dx);
-    
-    // Apply BOTH gaps to a single cylinder
-    start_gap = get_gap(angle, bb_w, bb_d) - 1;
-    end_gap = get_gap(angle + 180, bb_w, bb_d) + arrow_length;
-    
-    shortened_length = dist - start_gap - end_gap;
-    
-    if (shortened_length > 0) {
-        ux = dx / dist;
-        uy = dy / dist;
-        startX = p1[0] + ux * start_gap;
-        startY = p1[1] + uy * start_gap;
-
-        translate([startX, startY, base_thickness])
-            rotate([0, 0, angle])
-                rotate([0, 90, 0])
-                    cylinder(h = shortened_length, r = edge_radius, $fn=32);
-    }
-}
-
-
-To ensure seamless connections at elbows, define and use a sphere module:
-module edge_elbow_sphere(p) {
-    v = scale_p(p);
-    translate([v[0], v[1], base_thickness])
-        sphere(r = edge_radius, $fn=32);
-}
-
-
-For any edge that is a single straight line (no elbows), the "start" and "end" rules must be applied to the same cylinder call
-
-
-Edge Shortening (for Arrowhead Placement)
-
-
-
-
-To leave space for the arrow without intersecting the building block:
-
-edge_segment(p1, p2, type="mid") {
-    // 1. Calculate angle and distance between scaled points
-    // 2. If type=="start", add gap: get_gap(angle, bb_w, bb_d) + 0.5
-    // 3. If type=="end", subtract gap: get_gap(angle+180, bb_w, bb_d) + arrow_length + 0.5
-    // 4. Place cylinder at p1 + offset, rotated toward p2.
-}
 
 - For directed edges use the following:
-module edge_segment_direct(p1, p2) {
+module edge_segment_direct(p1, p2, is_start=false, is_end=false, source_shape_type="square", target_shape_type="square") {
     p1s = scale_p(p1); 
     p2s = scale_p(p2);
     dx = p2s[0] - p1s[0]; 
@@ -183,40 +135,54 @@ module edge_segment_direct(p1, p2) {
     dist = sqrt(dx*dx + dy*dy); 
     angle = atan2(dy, dx);
     
-    // Calculate gaps for both sides
-    start_gap = get_gap(angle, bb_w, bb_d) + 0.5;
-    end_gap = get_gap(angle + 180, bb_w, bb_d) + arrow_length + 0.5;
+    start_gap_dist = (source_shape_type == "diamond") ? (radius_diamond + 1) : shape_radius;
+    start_gap = is_start ? start_gap_dist : 0;
+
+    end_gap_dist = (target_shape_type == "diamond") ? (radius_diamond + 1) : shape_radius;
+    end_gap = is_end ? (end_gap_dist + arrow_length) : 0;
     
     len = dist - start_gap - end_gap;
     
+   
     if (len > 0) {
+    // DO NOT TOUCH THE base_thickness IN THE TRANSLATE 
         translate([p1s[0] + cos(angle)*start_gap, p1s[1] + sin(angle)*start_gap, base_thickness])
             rotate([0, 90, angle]) 
                 cylinder(h = len, r = edge_radius, $fn=24);
     }
 }
 
+To ensure seamless connections at elbows, define and use a sphere module:
+module edge_elbow_sphere(p) {
+    v = scale_p(p);
+        // DO NOT TOUCH THE base_thickness IN THE TRANSLATE 
+    translate([v[0], v[1], base_thickness])
+        sphere(r = edge_radius, $fn=32);
+}
+
+
+For any edge that is a single straight line (no elbows), the "start" and "end" rules must be applied to the same cylinder call
 
 CRITICAL: Place an edge_elbow_sphere(p_elbow) at every coordinate point where two segments meet (the elbow vertex). This "fills" the intersection and ensures a manifold, 3D-printable joint
 
 
 Edge Weight Text (Embossed on the Base)
-- Must appear as text at `Z = base_thickness`, **not above or on top of the edge**
+- Must appear as text at `Z = 3`, **not above or on top of the edge**, never modify this value
 - Positioned **slightly to the side of the edge**, orthogonally offset from midpoint, but ensuring **NO** overlap with the edge
 - Position edge labels (weights) at the midpoint of the **longest** segment of an edge.
 - Position them always parallel to the corresponding edge.
 - If the edge angle is between 90 and 270 degrees, rotate the label an additional 180 degrees to ensure it remains right-side up.
 
 Edge Shaft Geometry
-- Cylinder radius: edge_radius = 1.5;
+- Cylinder radius: edge_radius = 1.75;
 - Position: centered on the shortened vector
 - Rotation: atan2(dy, dx) (from source to target)
-- Length: distance - arrow_gap
+- Length:distance - arrow_gap
 
 Arrowhead Geometry
 Each arrow is defined as a flat isosceles triangle, extruded vertically:
-- Base width: arrow_width = min(bb_d * 0.9, 10);
-- Height (length): arrow_length = min(bb_d * 0.8, 12);
+- Base width: arrow_width = 4;
+- Height (length): arrow_length = 4;
 - Extrusion height: arrow_thickness = "like the radius of the edge "
 - Drawn in 2D at origin and transformed as follows:
   1. Tip positioned at: tip = p2 - unit_vector * building_block_depth
@@ -229,6 +195,7 @@ Each arrow is defined as a flat isosceles triangle, extruded vertically:
   5. Extrude using linear_extrude(height = arrow_thickness)
 
 Arrow Module Template
+
 module edge_arrow_triangle(p1, p2) {
     dx = p2[0] - p1[0];
     dy = p2[1] - p1[1];
@@ -237,14 +204,17 @@ module edge_arrow_triangle(p1, p2) {
     ux = dx / dist;
     uy = dy / dist;
     
-    // Tip stops exactly at the building block boundary
-gap_dist = get_gap(angle + 180, bb_w, bb_d);
-tip_x = p2[0] - ux * gap_dist;
-tip_y = p2[1] - uy * gap_dist;
+    // Tip stops exactly at the fixed shape_radius boundary
+    // If the target building block is a diamond, use radius_diamond; otherwise use shape_radius.
+    // Pass target_shape_type to this module to select the correct gap
+    gap_dist = (target_shape_type == "diamond") ? (radius_diamond + 3.5) : shape_radius;
+    tip_x = p2[0] - ux * gap_dist;
+    tip_y = p2[1] - uy * gap_dist;
 
+    // DO NOT TOUCH THE  BASE_THICKNESS IN THE TRANSLATE 
     translate([tip_x, tip_y, base_thickness])
         rotate([0, 0, angle])
-            linear_extrude(height = edge_radius) // Matches edge thickness
+            linear_extrude(height = edge_radius)
                 polygon(points=[
                     [0, 0],
                     [-arrow_length, -arrow_width / 2],
@@ -252,9 +222,7 @@ tip_y = p2[1] - uy * gap_dist;
                 ]);
 }
 
-Edge Module Example
-edge_cylinder(p1, p2);
-edge_arrow_triangle(p1, p2);
+
 
 Where p1 and p2 are the scaled and offset [x, y] coordinates of the source and destination nodes, respectively.
 
@@ -268,35 +236,35 @@ For multi-segment (elbow) edges, do not use manual rotations like rotate([0, 90,
 
 - THE HOLLOW BASE: The base must be created using a difference() where:
 
-    Child 1: The solid 200x200x3mm cube.
+    Child 1: The solid 130x200x3mm cube.
     Child 2 (The Cutters): A union() of the solid versions of all building blocks, offset internally by outline_thickness, and extruded through the entire base.
 
 - THE RAISED OUTLINES: Each building block must be a "hollow ridge" sitting on top of the base. To do this, use a difference() for each block:
 
     Child 1: The solid shape extruded to bb_h.
-    Child 2: The same shape, offset internally by outline_thickness, extruded slightly taller to ensure a clean cut.
+    Child 2: The same shape [IMPORTANT], offset internally by outline_thickness, extruded slightly taller to ensure a clean cut.
 
 - HOLE ALIGNMENT: Crucially, the "hole" in the base and the "hollow center" of the raised outline must use the exact same internal dimensions so that the center of the block is a single continuous void from the top of the ridge to the bottom of the base.
  
- // Solid Primitives (Used for both Outlines and Holes)
-module solid_oval(w, d) { scale([w/d, 1]) circle(d = d, $fn=64); }
+ // Solid Primitives (Used for both Outlines and Holes) NEVER MODIFY THIS
 
-module solid_rhomboid(w, d) {
-    slant = w * 0.15;
-    polygon([[-w/2+slant, d/2], [w/2+slant, d/2], [w/2-slant, -d/2], [-w/2-slant, -d/2]]);
+module solid_circle() { circle(d = block_size, $fn=64); }
+
+module solid_trapezoid() {
+    slant = block_size * 0.15;
+    polygon([[-block_size/2+slant, block_size/2], [block_size/2+slant, block_size/2], [block_size/2-slant, -block_size/2], [-block_size/2-slant, -block_size/2]]);
 }
 
-module solid_diamond(w, d) {
-    polygon([[0, d/2], [w/2, 0], [0, -d/2], [-w/2, 0]]);
+module solid_diamond() {
+    rotate([0, 0, 45]) square([block_size, block_size], center=true);
 }
 
-module solid_rect(w, d) { square([w, d], center=true); }
+module solid_square() { square([block_size, block_size], center=true); }
  
  
- 
-- No elements outside the 200mm x 200mm base.
+- No elements outside the 130mm x 200mm base.
 - Verify that the correct number of edges are created, and that every edge that has elbows is composed by 2 or 3 segments, depending on the description.
-- Verify that each edge only exits and enters a building block from and to the TOP, BOTTOM, LEFT or RIGHT, no other possibility.
+- Verify that each edge only exits and enters a building block from and to the TOP, BOTTOM, LEFT or RIGHT, no other possibility. [IMPORTANT]
 - No external includes or dynamic features
 - Ensure:
   - Printable, manifold geometry
@@ -321,10 +289,13 @@ OUTPUT FORMAT
 
 ### Verification Policy for Geometric and Structural Modeling
 - All aspects of the model must derive strictly from the input data (e.g., building block labels, coordinates, edge lists).
+- All the Building blocks, edges, arrowheads and labels need to be placed on the building base, not floating [IMPORTANT].
 - Do not generate or infer missing geometric information (such as angles, curves, labels or contents) unless explicitly instructed.
 - If content values or building block metadata are incomplete or ambiguous, request clarification before proceeding.
 - Do not assume or invent values for rendering purposes.
-- The "gap" calculation treats all shapes as bounded by the same rectangle to ensure consistency and prevent intersection.
 - All conditional logic (e.g., fallback positions, label orientation, placement tolerances) must be deterministic and verifiable.
 - If any part of the output relies on an assumption, it must be labeled as [Inference] and justified or replaced by a request for clarification.
 - Before outputting the file check that all modules and functions are outside the union, no exceptions [IMPORTANT].
+- All the Building blocks, edges and labels need to be INSIDE the building base [IMPORTANT].
+- Do not output a file that has floating elements or elements outside of the base[IMPORTANT].
+-If any element is floating, bring it on the building base.
