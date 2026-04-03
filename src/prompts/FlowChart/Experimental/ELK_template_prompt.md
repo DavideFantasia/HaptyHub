@@ -5,22 +5,22 @@ Your task is to translate this visual flowchart into a strict ELK (Eclipse Layou
 # Global Layout Rules:
 Start the JSON with the following exact root configuration to enforce 90-degree Manhattan routing and fixed ports:
 
-{
-  "id": "root",
-  "layoutOptions": {
-    "elk.algorithm": "layered",
-    "elk.direction": "DOWN",
-    "elk.edgeRouting": "ORTHOGONAL",
-    "elk.spacing.nodeNode": "30",
-    "elk.layered.spacing.nodeNodeBetweenLayers": "40",
-    "elk.spacing.edgeNode": "40",
-    "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-    "elk.layered.layering.strategy": "INTERACTIVE",
-    "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST"
-  },
-  "children": [],
-  "edges": []
-}
+        {
+        "id": "root",
+        "layoutOptions": {
+            "elk.algorithm": "layered",
+            "elk.direction": "DOWN",
+            "elk.edgeRouting": "ORTHOGONAL",
+            "elk.spacing.nodeNode": "30",
+            "elk.layered.spacing.nodeNodeBetweenLayers": "40",
+            "elk.spacing.edgeNode": "40",
+            "elk.layered.spacing.edgeNodeBetweenLayers": "40",
+            "elk.layered.layering.strategy": "INTERACTIVE",
+            "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST"
+        },
+        "children": [],
+        "edges": []
+        }
 
 ---
 
