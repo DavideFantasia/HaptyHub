@@ -1,4 +1,3 @@
-
 Your task is to generate a fully deterministic, structured, and geometrically accurate textual description of the flowchart, suitable for Accessibility (e.g., for visually impaired users);
 
 You must adhere to the exact structure and constraints below.
@@ -31,7 +30,7 @@ You must adhere to the exact structure and constraints below.
 - Report the total number of directed edges.
 - Provide a complete list of edges, each represented as an ordered pair of building blocks labels or identifiers: (source → target).
 - Provide a complete list of edges with elbows, and the direction of the elbows.
-- Any edge with a sharp corner has to be considered an elbow, otherwise consider it as a straight edge
+- Any edge with a sharp corner has to be considered an elbow, otherwise consider it as a straight edge.
 - Each edge must appear only once and represent a valid directional connection.
 - Self-loops must be reported only if clearly visible and intentional.
 - Do not infer direction or symmetry; use only what is explicitly visible.
@@ -47,6 +46,7 @@ You must adhere to the exact structure and constraints below.
 - Center the grid based on the overall building block bounding box.
 - Use only integer values (no floats or visual estimates).
 - The origin (0, 0) must be geometrically centered in the layout.
+
 
 -Assign to each elbow of an edge a unique 2D coordinate (X, ) expressed in integer logical units.
 - X = horizontal, Y = vertical based on the image.
@@ -76,7 +76,6 @@ Ensure the table includes all building blocks and their logical coordinates, usa
 Provide a table in the following format:
 | Edge Elbow | X | Y |
 Ensure the table includes all Edge Elbow and their logical coordinates, usable directly in programmatic contexts.
-
 
 Provide a table in the following format:
 | Edge | Exit Direction | Enter Direction |
@@ -117,6 +116,7 @@ Global Constraints
 - Building block labeling must reflect exactly what is shown in the image, or must follow a strict and reproducible naming rule if labels are missing.
 - If contents are detected or provided in the building block structure, they must be included clearly and systematically in the output.
 - This includes symbolic values such as '∞', which must be treated as explicit data and included in the final content table.**
+- The only possible shapes that you should use are CIRCLE, PARALLELOGRAM, DIAMOND and RECTANGLE, do not use any other shape.
 
 ---
 
