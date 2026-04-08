@@ -4,26 +4,26 @@ echo "==========================================="
 echo " Installazione di HaptyGraph - Lettore NVA "
 echo "==========================================="
 
-# Creazione dell'ambiente virtuale Python
-echo "[1/4] Creazione dell'ambiente virtuale (venv)..."
+# 1. Creazione dell'ambiente virtuale Python
+echo "[1/5] Creazione dell'ambiente virtuale (venv)..."
 python3 -m venv venv
 
-# Installazione delle dipendenze
-echo "[2/4] Installazione delle librerie Python..."
+# 2. Installazione delle dipendenze
+echo "[2/5] Installazione delle librerie Python..."
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt # Assicurati di avere questo file con scritto 'pyserial' ecc.
+pip install -r requirements.txt
 deactivate
 
-# Configurazione permessi Hardware (Regole udev)
-echo "[3/4] Configurazione dei permessi USB (richiede password amministratore)..."
+# 3. Configurazione permessi Hardware (Regole udev)
+echo "[3/5] Configurazione dei permessi USB (richiede password amministratore)..."
 UDEV_RULE='KERNEL=="ttyUSB*", MODE="0666"\nKERNEL=="ttyACM*", MODE="0666"'
 echo -e "$UDEV_RULE" | sudo tee /etc/udev/rules.d/99-nanovna-sensor.rules > /dev/null
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-# Creazione scorciatoia desktop/menu (Opzionale ma molto comodo)
-echo "[4/4] Creazione dell'icona nel menu applicazioni..."
+# 4. Creazione scorciatoia desktop/menu
+echo "[4/5] Creazione dell'icona nel menu applicazioni..."
 APP_DIR=$(pwd)
 DESKTOP_FILE="$HOME/.local/share/applications/HaptyGraph.desktop"
 
@@ -38,7 +38,17 @@ EOF
 
 chmod +x "$DESKTOP_FILE"
 
+# 5. Creazione file delle Variabili d'Ambiente (.env)
+echo "[5/5] Creazione del file di configurazione (.env)..."
+if [ ! -f ".env" ]; then
+    echo "OPENAI_API_KEY=" > .env
+    echo "GEMINI_API_KEY=" >> .env
+    echo "  -> File .env creato con successo."
+else
+    echo "  -> File .env già esistente, chiavi API preservate."
+fi
+
 echo "========================================"
 echo " Installazione Completata con successo! "
-echo " Puoi lanciare il programma dal menu applicazioni o eseguendo venv/bin/python main.py"
+echo " IMPORTANTE: Apri il file .env e inserisci le tue chiavi API prima di avviare il programma."
 echo "========================================"
