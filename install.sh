@@ -25,7 +25,7 @@ sudo udevadm trigger
 # Creazione scorciatoia desktop/menu (Opzionale ma molto comodo)
 echo "[4/4] Creazione dell'icona nel menu applicazioni..."
 APP_DIR=$(pwd)
-DESKTOP_FILE="$HOME/.local/share/applications/nanovna-sensor.desktop"
+DESKTOP_FILE="$HOME/.local/share/applications/HaptyGraph.desktop"
 
 cat <<EOF > "$DESKTOP_FILE"
 [Desktop Entry]
