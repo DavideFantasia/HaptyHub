@@ -345,6 +345,9 @@ class LandingWindow(QMainWindow):
         if not image_path:
             self.console_output.append(">> ERRORE: Nessuna immagine selezionata. Scegli un file prima di inviare.")
             return
+        if not config.GEMINI_API_KEY and not config.DEBUG_MODE:
+            self.console_output.append(">> ERRORE: API Key di Gemini non configurata. Inseriscila nelle Opzioni.")
+            return
 
         self.console_output.clear()
         # Disabilita il pulsante per evitare doppi invii
