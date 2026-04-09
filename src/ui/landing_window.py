@@ -168,6 +168,16 @@ class LandingWindow(QMainWindow):
         # Aggiungiamo le azioni al menu visivo
         template_menu.addActions([act_flow, act_dir, act_undir, act_set])
 
+        # ======== Menu 'Tattile' ========
+        tactile_menu = menu_bar.addMenu("&Tattile")
+        act_calibrate = QAction("Calibrazione Sensore", self)
+        act_calibrate.triggered.connect(self.open_calibration_window)
+        tactile_menu.addAction(act_calibrate)
+
+        act_read = QAction("Lettura Grafo Tattile", self)
+        act_read.triggered.connect(self.open_reading_window)
+        tactile_menu.addAction(act_read)
+
         # ======== Menu 'Opzioni' ========
         options_menu = menu_bar.addMenu("&Opzioni")
         
@@ -184,6 +194,19 @@ class LandingWindow(QMainWindow):
         act_debug_mode.triggered.connect(self._toggle_debug_mode) 
         options_menu.addAction(act_debug_mode)
         
+    def open_calibration_window(self):
+        """Apre la finestra di calibrazione del sensore."""
+        from src.ui.calibration_window import CalibrationWindow
+        # Passiamo l'istanza del lettore del sensore alla finestra di calibrazione
+        self.calibration_window = CalibrationWindow()
+        self.calibration_window.show()
+
+    def open_reading_window(self):
+        """Apre la finestra di lettura del grafo tattile."""
+        from src.ui.hapticReader_window import HapticReaderWindow
+        # Passiamo l'istanza del lettore del sensore alla finestra di lettura
+        self.haptic_reader_window = HapticReaderWindow()
+        self.haptic_reader_window.show()
 
     def _init_central_widget(self):
         """Inizializza il widget centrale e il layout principale."""

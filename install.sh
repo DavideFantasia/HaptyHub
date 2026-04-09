@@ -26,14 +26,17 @@ sudo udevadm trigger
 echo "[4/5] Creazione dell'icona nel menu applicazioni..."
 APP_DIR=$(pwd)
 DESKTOP_FILE="$HOME/.local/share/applications/HaptyGraph.desktop"
+# percorso dell'icona basato sulla cartella attuale
+ICON_PATH="$APP_DIR/src/utils/icon.svg"
 
 cat <<EOF > "$DESKTOP_FILE"
 [Desktop Entry]
 Name=HaptyGraph
 Exec=$APP_DIR/venv/bin/python $APP_DIR/main.py
-Terminal=true
+Icon=$ICON_PATH
+Terminal=false
 Type=Application
-Categories=Utility;Engineering;
+Categories=Utility;Engineering;Application;
 EOF
 
 chmod +x "$DESKTOP_FILE"

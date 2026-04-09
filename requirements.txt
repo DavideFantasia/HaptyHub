@@ -5,4 +5,6 @@ python-dotenv==1.2.2 # per la gestione delle variabili d'ambiente
 opencv-python-headless # per la gestione delle immagini e video
 pillow # per la gestione delle immagini
 google-genai # per l'integrazione con Gemini
-pyserial # per la comunicazione con la scheda 
+pyserial # per la comunicazione con la scheda
+scipy # per il processing dei segnali dalla scheda
+pyqtgraph # per la visualizzazione dei dati in tempo reale 
