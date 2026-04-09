@@ -1,7 +1,8 @@
-PyQt6==6.10.2
-PyQt6-Qt6==6.10.2
-PyQt6_sip==13.11.1
-python-dotenv==1.2.2
-opencv-python-headless
-pillow
-google-genai
+PyQt6==6.10.2 # per la creazione dell'interfaccia grafica
+PyQt6-Qt6==6.10.2 # per la gestione delle dipendenze di Qt6
+PyQt6_sip==13.11.1 # per la gestione delle estensioni C++ di PyQt6
+python-dotenv==1.2.2 # per la gestione delle variabili d'ambiente
+opencv-python-headless # per la gestione delle immagini e video
+pillow # per la gestione delle immagini
+google-genai # per l'integrazione con Gemini
+pyserial # per la comunicazione con la scheda 
