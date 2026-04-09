@@ -25,7 +25,6 @@ load_dotenv()
 # Legge la chiave definita nel file .env, se non presente
 # va creato
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY: raise ValueError("GEMINI API Key not found")
 
 #GEMINI_MODEL_ID = "gemini-3.1-pro-preview"
 #GEMINI_MODEL_ID = "gemini-2.5-flash"

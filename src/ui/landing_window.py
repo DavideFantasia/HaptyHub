@@ -2,7 +2,8 @@ import sys
 import os
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QTextEdit, QPushButton, QMenuBar, QMenu, 
-                             QFileDialog, QFrame, QSizePolicy, QStyle, QStackedWidget)
+                             QFileDialog, QFrame, QSizePolicy, QStyle, QStackedWidget,
+                             QDialog, QLineEdit, QMessageBox)
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -120,7 +121,7 @@ class LandingWindow(QMainWindow):
         self._apply_styles()
 
     def _init_menu_bar(self):
-        """Crea la barra dei menu con la voce 'File'."""
+        """Crea la barra dei menu con la voce 'File', 'Template' e 'Opzioni'."""
         menu_bar = self.menuBar()
 
         # ======== Menu 'File' ======== 
@@ -166,6 +167,22 @@ class LandingWindow(QMainWindow):
 
         # Aggiungiamo le azioni al menu visivo
         template_menu.addActions([act_flow, act_dir, act_undir, act_set])
+
+        # ======== Menu 'Opzioni' ========
+        options_menu = menu_bar.addMenu("&Opzioni")
+        
+        act_api_key = QAction("API Key", self)
+        act_api_key.triggered.connect(self._apri_impostazioni_api)
+        options_menu.addAction(act_api_key)
+
+        # ---- Modalità Debug -----
+        act_debug_mode = QAction("Modalità Debug", self)
+        act_debug_mode.setCheckable(True)
+        # Imposta la spunta iniziale leggendo il valore di default in config.py
+        act_debug_mode.setChecked(config.DEBUG_MODE) 
+        # Collega il click alla funzione che cambierà lo stato
+        act_debug_mode.triggered.connect(self._toggle_debug_mode) 
+        options_menu.addAction(act_debug_mode)
         
 
     def _init_central_widget(self):
@@ -348,6 +365,79 @@ class LandingWindow(QMainWindow):
         # Avvia il processo in background
         self.worker.start()
 
+    def _apri_impostazioni_api(self):
+        """Apre un QDialog modale per inserire o modificare l'API Key di Gemini."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Impostazione API Key")
+        dialog.resize(450, 180)
+        dialog.setModal(True) # Blocca la finestra sottostante finché non si chiude
+
+        layout = QVBoxLayout(dialog)
+
+        # --- Testo descrittivo con Link cliccabile (grazie al formato RichText) ---
+        testo_html = (
+            "<div align='center'>"
+            "Incolla la tua chiave di Gemini, se non ne sei in possesso,<br>"
+            "puoi prenderla da qui:<br>"
+            "<a href='https://aistudio.google.com/app/api-keys'>https://aistudio.google.com/app/api-keys</a>"
+            "</div>"
+        )
+        lbl_info = QLabel(testo_html)
+        lbl_info.setOpenExternalLinks(True) # Permette il click diretto sul link
+        lbl_info.setTextFormat(Qt.TextFormat.RichText)
+        lbl_info.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        layout.addWidget(lbl_info)
+
+        # --- Campo di input per la chiave ---
+        entry_chiave = QLineEdit()
+        entry_chiave.setPlaceholderText("Inserisci la tua API Key...")
+        # Usa EchoMode se in futuro vuoi nasconderla stile password (entry_chiave.setEchoMode(QLineEdit.EchoMode.Password))
+        layout.addWidget(entry_chiave)
+
+        # --- Lettura pre-caricamento dal file .env ---
+        env_path = os.path.join(os.getcwd(), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for linea in f:
+                    if linea.startswith("GEMINI_API_KEY="):
+                        chiave_attuale = linea.strip().split("=", 1)[1]
+                        entry_chiave.setText(chiave_attuale)
+
+        # --- Pulsante Salva e sua logica ---
+        btn_salva = QPushButton("Salva")
+        btn_salva.setMinimumHeight(35)
+        layout.addWidget(btn_salva)
+
+        def salva_chiave():
+            nuova_chiave = entry_chiave.text().strip()
+            linee = []
+            
+            # Legge il file esistente per non sovrascrivere OPENAI_API_KEY
+            if os.path.exists(env_path):
+                with open(env_path, "r") as f:
+                    linee = f.readlines()
+            
+            chiave_aggiornata = False
+            for i, linea in enumerate(linee):
+                if linea.startswith("GEMINI_API_KEY="):
+                    linee[i] = f"GEMINI_API_KEY={nuova_chiave}\n"
+                    chiave_aggiornata = True
+                    break
+            
+            if not chiave_aggiornata:
+                linee.append(f"GEMINI_API_KEY={nuova_chiave}\n")
+                
+            with open(env_path, "w") as f:
+                f.writelines(linee)
+                
+            QMessageBox.information(dialog, "Successo", "API Key salvata correttamente nel file .env!")
+            dialog.accept() # Chiude il QDialog con successo
+
+        btn_salva.clicked.connect(salva_chiave)
+
+        # Mostra il dialogo
+        dialog.exec()
+
     def update_ui_progress(self, message):
         """Aggiorna la console di output con lo stato attuale."""
         # Usiamo append() invece di setPlainText() per mantenere lo storico dei messaggi
@@ -376,6 +466,14 @@ class LandingWindow(QMainWindow):
         )
         self.console_output.append(error_msg)
         self._cleanup_worker()
+
+    def _toggle_debug_mode(self, checked):
+        """Attiva o disattiva la modalità di debug a runtime."""
+        config.DEBUG_MODE = checked
+        
+        # Diamo un feedback visivo all'utente nella console
+        stato = "ATTIVATA (Verrà usato il TestClient)" if checked else "DISATTIVATA (Verranno fatte chiamate API reali)"
+        self.console_output.append(f"\n>> Modalità Debug: {stato}")
 
     def _cleanup_worker(self):
         """Forza la distruzione del thread sganciandolo dalla memoria."""
