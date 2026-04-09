@@ -51,6 +51,11 @@ class BaseSensorReader(ABC):
 #=============================================================================
 # Implementazione concreta per la lettura dei dati da una NanoVNA via seriale
 #=============================================================================
+#
+#   Start: 50Khz, Stop: 900Mhz, Step: 9Mhz => 101 punti per scansione
+#
+#=============================================================================
+
 
 class NVAReader(BaseSensorReader):
     def __init__(self, port: str='standard', baudrate: int = 115200, timeout: float = 1.0):
@@ -93,7 +98,7 @@ class NVAReader(BaseSensorReader):
             
             # 3. Diamo alla scheda un attimo di respiro per calcolare e rispondere
             import time
-            time.sleep(0.2)
+            time.sleep(0.05)
 
     def read_data(self) -> list:
         if not self.serial_conn or not self.serial_conn.is_open:
