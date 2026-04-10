@@ -9,3 +9,4 @@ pyserial # per la comunicazione con la scheda
 scipy # per il processing dei segnali dalla scheda
 pyqtgraph # per la visualizzazione dei dati in tempo reale
 pyttsx3 # per la sintesi vocale
+pywin32 # per l'integrazione con Windows COM
