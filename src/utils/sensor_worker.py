@@ -16,6 +16,7 @@ class SensorWorker(QThread):
     def __init__(self, sensor):
         super().__init__()
         self.sensor = sensor
+        self.sensor.connect()
         self.is_running = True
         self.is_paused = False
 

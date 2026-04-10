@@ -27,7 +27,6 @@ class CalibrationWindow(QMainWindow):
         self.resize(1000, 600)
         
         self.sensor = sensor
-        self.sensor.connect() # Avvio della connessione
         self.haptic_graph = HapticGraph()
         
         # Variabili per la Macchina a Stati e Signal Processing

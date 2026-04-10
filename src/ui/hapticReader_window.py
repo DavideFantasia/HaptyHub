@@ -19,7 +19,6 @@ class HapticReaderWindow(QMainWindow):
         self.resize(1000, 600)
         
         self.sensor = sensor
-        self.sensor.connect()  # Proviamo a connetterci al sensore all'avvio
         self.graph = None # Qui caricheremo il file JSON
         
         # Variabili di stato per la lettura
