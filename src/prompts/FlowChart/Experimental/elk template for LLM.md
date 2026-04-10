@@ -11,12 +11,13 @@ Start the JSON with the following exact root configuration to enforce 90-degree 
             "elk.algorithm": "layered",
             "elk.direction": "DOWN",
             "elk.edgeRouting": "ORTHOGONAL",
-            "elk.spacing.nodeNode": "10",
-            "elk.layered.spacing.nodeNodeBetweenLayers": "10",
-            "elk.spacing.edgeNode": "10",
-            "elk.layered.spacing.edgeNodeBetweenLayers": "10",
+            "elk.spacing.nodeNode": "80",
+            "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+            "elk.spacing.edgeNode": "80",
+            "elk.layered.spacing.edgeNodeBetweenLayers": "80",
             "elk.layered.layering.strategy": "INTERACTIVE",
-            "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST"
+            "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
+            "elk.portConstraints": "FIXED_SIDE"
         },
         "children": [],
         "edges": []
@@ -32,6 +33,8 @@ For every shape in the flowchart, create a node object. You MUST include a custo
         "myCustomShape": "circle"
 
         "width": 40, "height": 40
+        
+                Crucial Rule: Nodes with side ports MUST include "layoutOptions": { "elk.portConstraints": "FIXED_SIDE" } inside the node definition.
 
         Ports: Start nodes need a SOUTH port. Finish nodes need a NORTH port. (if two or more ports arrive at the finish node merge them in the north port)
 
@@ -40,6 +43,8 @@ For every shape in the flowchart, create a node object. You MUST include a custo
         "myCustomShape": "square"
 
         "width": 40, "height": 40
+        
+                Crucial Rule: Nodes with side ports MUST include "layoutOptions": { "elk.portConstraints": "FIXED_SIDE" } inside the node definition.
 
         Ports: either NORTH, EAST or WEST (for incoming), SOUTH (for outgoing).
 
@@ -48,6 +53,8 @@ For every shape in the flowchart, create a node object. You MUST include a custo
         "myCustomShape": "trapezoid"
 
         "width": 50, "height": 50
+        
+                Crucial Rule: Nodes with side ports MUST include "layoutOptions": { "elk.portConstraints": "FIXED_SIDE" } inside the node definition.
 
         Ports: either NORTH, EAST or WEST (for incoming), SOUTH (for outgoing).
 
@@ -103,6 +110,17 @@ Trace every line in the flowchart.
     If a line has text (like "Yes" or "No"), add it to the edge: "labels": [{"text": "Yes"}].
     
     if two or more edge arrive at the same node merge them in a single port.
+    
+    Strict Port Uniqueness: A single port (ID) cannot function as both a sourcePort and a targetPort within the same JSON.
+
+    Collision Avoidance: If an edge exits a node's EAST port, no incoming edge can target that same node's EAST port.
+    
+---
+
+#Port Conflict Logic:
+
+Before generating, verify: Is any port ID used in both the "source" of one edge and the "target" of another? If yes, move the incoming edge to an unused cardinal side (WEST or NORTH).
+     
     
 ---
 
