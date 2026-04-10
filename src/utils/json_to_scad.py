@@ -108,9 +108,10 @@ def generate_scad(json_filepath, scad_filepath):
     # Write the header and physical dimensions
     scad.append("""// --- GLOBAL SETTINGS & CONSTANTS ---
 $fn = 50;
-base_width = 148;
-base_height = 236;
-base_thickness = 3;
+                // Baseplate dimensions of the Samsung Tab A 2016 with S pen
+base_width = 135;
+base_height = 217;
+base_thickness = 2;
 
 block_size = 15;
 radius_circle = 7.5;
@@ -118,14 +119,14 @@ radius_square = 7.5;
 
 // AUTOMATIC MATH: The pointy corner of a square rotated 45 degrees is (size/2) * sqrt(2)
 radius_diamond = (block_size / 2) * sqrt(2); 
-radius_trapezoid = 10;
+radius_trapezoid = 12;
 
 outline_thickness = 1;
-bb_h = 3;
+bb_h = 4;
 edge_radius = 1.25;
 shape_radius = (block_size / 2) + 1; // Standard +1mm gap to prevent overlapping
 arrow_length = 4;
-arrow_width = 4;
+arrow_width = 3.5;
 margin = 10;
 
 // --- DYNAMIC GRID & SPACING ---""")
