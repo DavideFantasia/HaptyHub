@@ -7,4 +7,5 @@ pillow # per la gestione delle immagini
 google-genai # per l'integrazione con Gemini
 pyserial # per la comunicazione con la scheda
 scipy # per il processing dei segnali dalla scheda
-pyqtgraph # per la visualizzazione dei dati in tempo reale 
+pyqtgraph # per la visualizzazione dei dati in tempo reale
+pyttsx3 # per la sintesi vocale
