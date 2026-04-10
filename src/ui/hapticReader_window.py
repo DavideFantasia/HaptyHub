@@ -11,6 +11,7 @@ import time
 from src.utils.sensor_reader import NVAReader
 from src.models.graph_models import HapticGraph
 from src.utils.sensor_worker import SensorWorker
+from src.utils.tts_worker import TTSWorker
 
 class HapticReaderWindow(QMainWindow):
     def __init__(self, sensor= NVAReader()):
@@ -26,6 +27,11 @@ class HapticReaderWindow(QMainWindow):
         self.baseline_data = None
         self.threshold = 0.1 # Mantieni la stessa soglia usata in calibrazione
         self.is_baseline_ready = False
+
+        # --- GESTIONE TEXT TO SPEECH ---
+        self.tts_worker = TTSWorker()
+        self.tts_worker.start()
+        self.ultimo_nodo_letto = None # per evitare stuttering
 
         self._setup_ui()
         self._init_menu_bar()
@@ -140,7 +146,7 @@ class HapticReaderWindow(QMainWindow):
         # --- 2. Rilevamento Tocco ---
         diff = np.abs(mags - self.baseline_data)
         
-        # ... (Tutto il resto della logica dell'MSE rimane esattamente identico a prima!) ...
+        # Calcolo EMS
         if np.max(diff) > self.threshold:
             best_node = None
             min_mse = float('inf')
@@ -159,11 +165,22 @@ class HapticReaderWindow(QMainWindow):
                 self.lbl_nodo_rilevato.setText(best_node.id)
                 self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #2196F3;")
                 self.lbl_descrizione.setText(best_node.description)
+
+                # --- LOGICA TEXT-TO-SPEECH ---
+                # Parla solo se il nodo è diverso da quello che stiamo già tenendo premuto
+                if best_node.id != self.ultimo_nodo_letto:
+                    self.ultimo_nodo_letto = best_node.id
+                    self.tts_worker.parla(best_node.description)
         else:
             # Sotto la soglia, il dito è stato rimosso
             self.lbl_nodo_rilevato.setText("Nessun tocco")
             self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #555;")
             self.lbl_descrizione.setText("")
+
+            # --- LOGICA TEXT-TO-SPEECH ---
+            # Resettiamo la memoria quando alziamo il dito.
+            # Così, se ritocchiamo lo STESSO nodo, lo rileggerà.
+            self.ultimo_nodo_letto = None
 
     def closeEvent(self, event):
         """Gestione pulita della chiusura della finestra e del thread."""
@@ -171,5 +188,9 @@ class HapticReaderWindow(QMainWindow):
         if hasattr(self, 'worker') and self.worker.isRunning():
             self.worker.stop()
             
+        # Ferma la voce
+        if hasattr(self, 'tts_worker') and self.tts_worker.isRunning():
+            self.tts_worker.stop()
+
         self.deleteLater()
         event.accept()
