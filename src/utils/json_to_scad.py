@@ -127,8 +127,8 @@ edge_radius = 1.25;
 shape_radius = (block_size / 2) + 1; // Standard +1mm gap to prevent overlapping
 arrow_length = 4;
 arrow_width = 3.5;
-margin = 10;
-
+margin_x = 14.115; // The minimum empty space on the left and right
+margin_y = 18.325; // The minimum empty space on the top and bottom
 // --- DYNAMIC GRID & SPACING ---""")
     
     # Write the layout boundaries we calculated in Python into SCAD
@@ -138,9 +138,12 @@ margin = 10;
     # This OpenSCAD math calculates exactly how much to scale and shift the ELK coordinates
     # so they fit perfectly centered on the 130x200 baseplate with a 10mm margin.
     scad.append("""
-grid_spacing = min((base_width - (margin * 2)) / max(1, (max_x - min_x)), 
-                   (base_height - (margin * 2)) / max(1, (max_y - min_y)));
-
+                
+safe_margin_x = margin_x + (block_size / 2);
+safe_margin_y = margin_y + (block_size / 2);
+grid_spacing = min((base_width - (safe_margin_x * 2)) / max(1, (max_x - min_x)), 
+                   (base_height - (safe_margin_y * 2)) / max(1, (max_y - min_y)));
+                
 x_offset = (base_width / 2) - ((min_x + max_x) / 2 * grid_spacing);
 y_offset = (base_height / 2) - ((min_y + max_y) / 2 * grid_spacing);
 
@@ -297,7 +300,22 @@ union() {
         if edge['label'] and longest_segment:
             scad.append(f"    edge_weight_label({longest_segment[0]}, {longest_segment[1]}, \"{edge['label']}\");")
 
+
     scad.append("}") # Close the union block
+
+    scad.append("""
+                // --- MARGIN DEBUGGING FRAME ---
+// The '%' makes this shape transparent and prevents it from being exported for 3D printing.
+%translate([0, 0, base_thickness + 0.1]) 
+    difference() {
+        // Outer box (size of the whole tablet screen)
+        cube([base_width, base_height, 0.5], center=false);
+        
+        // Inner cutout (the "safe zone" created by your margins)
+        translate([margin_x, margin_y, -1])
+            cube([base_width - (margin_x * 2), base_height - (margin_y * 2), 2], center=false);
+    }""")
+
 
     # Save to file
     with open(scad_filepath, 'w') as f:
@@ -306,4 +324,4 @@ union() {
     print(f"Successfully generated final OpenSCAD file: {scad_filepath}")
 
 
-generate_scad('output_coordinates.json', 'rigid_flowchart.scad')
+generate_scad('output_coordinates.json', 'flowchart.scad')
