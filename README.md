@@ -1,89 +1,133 @@
 # HaptyGraph
+HaptyGraph è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM e Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
+Oltre alla generazione del modello 3D, il software si interfaccia con hardware esterno per **rendere i modelli 3D interattivi**: toccando i nodi del modello stampato, l'applicazione riconosce il tocco e legge ad alta voce la descrizione del nodo tramite sintesi vocale (Text-to-Speech).
 
-HaptyGraph è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM e Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`). 
-L'obiettivo principale è favorire l'accessibilità allo studio per studenti ciechi o ipovedenti (Low Vision), permettendo la stampa 3D rapida di materiale didattico.
+L'obiettivo principale è favorire l'accessibilità allo studio per studenti ciechi o ipovedenti (Low Vision), permettendo la stampa 3D rapida di materiale didattico e l'esplorazione aptica interattiva.
 
-## Architettura e Flusso di Lavoro
+---
 
-L'applicazione è sviluppata in **Python 3** con interfaccia grafica **PyQt6**. 
-La generazione del modello 3D avviene tramite le API di Google Gemini (`google-genai`) in due fasi distinte e sequenziali, per massimizzare la precisione spaziale:
+# Installazione e Setup
+Per eseguire il software è necessario avere [Python 3](https://www.python.org/downloads/) installato sul sistema. Il progetto include script di installazione automatica che creano un ambiente virtuale, installano le dipendenze e creano le scorciatoie sul desktop.
 
-1.  **Fase 1 (Vision to Text):** L'immagine caricata e i parametri scelti dall'utente vengono inviati al modello Vision. Il modello restituisce una descrizione testuale altamente strutturata, deterministica e geometricamente accurata del grafo (nodi, archi, coordinate spaziali).
-2.  **Fase 2 (Text to Code):** La descrizione testuale della Fase 1 viene passata nuovamente all'LLM (con un system prompt diverso) che agisce come esperto programmatore per generare esclusivamente codice **OpenSCAD** valido.
-
-> **Nota di sviluppo:** Le chiamate API sono gestite in modo asincrono tramite un `QThread` (`GeminiWorker`) per evitare il blocco dell'interfaccia grafica durante l'attesa delle risposte.
-
-## Struttura del Progetto
-
-Il progetto segue un approccio modulare per facilitare l'aggiunta di nuovi tipi di diagrammi:
-
-```text
-HaptyGraph/
-├── .env                    # (Da creare) Contiene GEMINI_API_KEY
-├── config.py               # Variabili globali, path e toggle DEBUG_MODE
-├── main.py                 # Entry-point dell'applicazione
-├── requirements.txt        # Dipendenze del progetto
-├── output/                 # Cartella autogenerata per i file .scad finali
-└── src/
-    ├── api_client.py       # Gestione delle chiamate a Gemini (Client reale e TestClient)
-    ├── prompts/            # Logica e testi per i prompt inviati all'IA
-    │   ├── templates.py    # Classi base e implementazioni dei vari template
-    │   ├── FlowChart/      # File .txt con i prompt (Fase 1 e 2) per Flow Charts
-    │   ├── SetTheory/      # File .txt con i prompt (Fase 1 e 2) per grafici della Set Theory
-    │   ├── DirectGraph/    # File .txt con i prompt (Fase 1 e 2) per grafi diretti
-    │   └── UndirectGraph/  # File .txt con i prompt (Fase 1 e 2) per grafi indiretti
-    ├── ui/                 # Componenti dell'interfaccia utente (PyQt6)
-    │   ├── landing_window.py # Finestra principale e gestione eventi
-    │   └── panels.py       # Pannelli dinamici (Form) per i parametri specifici
-    └── utils/
-        └── image_helper.py # Utility OpenCV/PyQt per caricamento e scaling immagini
-```
-
-## Installazione e Setup
-Per eseguire il software è necessario Python 3 installato sul sistema. Si consiglia vivamente l'uso di un ambiente virtuale.
-
-```Bash
+## 1.    Clonare il repository
+```bash
 git clone git@github.com:DavideFantasia/HaptyGraph.git
 cd HaptyGraph
 ```
-### Configurazione Ambiente Virtuale
-#### Su Linux/macOS:
+
+## 2. Eseguire l'installazione automatica
+
+### Su Windows:
+Fai doppio clic sul file `install.bat` oppure eseguilo da terminale. Lo script configurerà l'ambiente e creerà un collegamento sul Desktop.
+
+### Su Linux/macOS:
+Apri il terminale ed esegui lo script bash (ti verrà chiesta la password per configurare le regole `udev` necessarie alla lettura della porta USB):
 
 ```Bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+chmod +x install.sh
+./install.sh
 ```
-*(Solo per Linux)*: Per evitare problemi di caricamento cursori con PyQt6, assicurati di avere installata la libreria di sistema:
-`sudo apt install libxcb-cursor0`
+### 3. Configurazione API Key
+Il progetto utilizza le API di Google Gemini. Dopo l'installazione, verrà generato un file denominato `.env` nella cartella principale.
+Puoi inserire la tua chiave in due modi:
+1. Avviando il programma e andando nel menu in alto: `Opzioni -> API Key`.
+2. Aprendo il file `.env` con un editor di testo e incollando la chiave: `GEMINI_API_KEY=la_tua_chiave`
 
-#### Su Windows:
+La propria chiave di Gemini è trovabile al seguente [link](https://aistudio.google.com/api-keys)
 
-```Bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+---
+
+# Guida all'uso
+Il software è diviso in tre flussi di lavoro principali, accessibili dalla UI:
+
+## Creazione di file SCAD da foto
+Questa funzione traduce un'immagine 2D in codice 3D.
+
+1. Avvia l'applicazione (doppio clic sull'icona creata sul Desktop).
+2. Trascina un'immagine (es. Flow Chart, Grafo) nell'area di **PREVIEW IMG** a sinistra, oppure cliccaci sopra per selezionare un file.
+3. Seleziona il tipo di diagramma dal menu Template in alto (es. _Direct Graph_, _Flow Chart_).
+4. Compila i parametri richiesti nel pannello di destra (Numero di Nodi, Archi, ecc.).
+5. Clicca sul pulsante Invia. L'IA elaborerà l'immagine in due fasi e salverà automaticamente il file generato nella cartella `output/`.
+
+## Calibrazione e Associazione (Grafi Aptici)
+Questa funzione serve per "insegnare" al software a riconoscere i tocchi sul modello stampato in 3D, salvando le frequenze di risonanza.
+
+1. Collega la scheda hardware sensore (es. _NanoVNA_) via USB.
+2. Vai nel menu **Tattile -> Calibrazione Sensore**.
+3. Il software stabilirà una linea di base ambientale (**non toccare il sensore** in questa fase).
+4. Segui le istruzioni a schermo: **tocca fisicamente un nodo** sul modello 3D e tieni premuto.
+5. Quando il software rileva e stabilizza il picco, rilascia e compila l'ID e la Descrizione del nodo.
+6. Ripeti per tutti i nodi. Al termine, clicca su **Termina ed Esporta** per salvare l'intera mappa tattile in un file `.json`.
+
+## Lettura Interattiva del Grafo Aptico
+Questa è la modalità di utilizzo per l'utente finale. Permette l'esplorazione del modello 3D stampato con feedback vocale.
+
+1. Vai nel menu **Tattile -> Lettura Grafo Tattile**.
+2. Dal menu della nuova finestra, fai clic su **File -> Importa Grafo (JSON)** e seleziona il file di calibrazione creato precedentemente.
+3. Il software calcolerà una _nuova linea_ di base (per adattarsi alle condizioni ambientali attuali).
+4. Tocca un nodo qualsiasi sul modello fisico: il software calcolerà in tempo reale l'Errore Quadratico Medio (MSE) delle frequenze, individuerà il nodo corrispondente e lo leggerà ad alta voce usando la sintesi vocale nativa (Windows SAPI5 o Linux espeak/mbrola).
+
+---
+
+# Note di Sviluppo e Architettura
+Il progetto è costruito per essere modulare, reattivo ed estensibile.
+
+## Struttura del Progetto
+```text
+HaptyGraph/
+├── .env                    # (Da creare) Contiene le chiavi API (es. GEMINI_API_KEY)
+├── config.py               # Variabili globali, path e toggle DEBUG_MODE
+├── install.bat             # Script di installazione automatica per Windows
+├── install.sh              # Script di installazione automatica per Linux/macOS
+├── main.py                 # Entry-point dell'applicazione PyQt6
+├── requirements.txt        # Elenco delle dipendenze Python del progetto
+├── src/                    # Codice sorgente principale
+│   ├── api_client.py       # Gestione delle chiamate a Gemini (Client reale e TestClient)
+│   ├── models/
+│   │   └── graph_models.py # Classi dati (Node, HapticGraph) e logica di salvataggio/caricamento JSON
+│   ├── prompts/            # Logica e testi per i prompt inviati all'IA
+│   │   ├── templates.py    # Classi base e implementazioni dei vari template per diagrammi
+│   │   ├── DirectGraph/    # Prompt (Fase 1 e 2) per grafi diretti
+│   │   ├── FlowChart/      # Prompt (Fase 1 e 2) per diagrammi di flusso
+│   │   ├── Set/            # Prompt (Fase 1 e 2) per la teoria degli insiemi
+│   │   └── UndirectGraph/  # Prompt (Fase 1 e 2) per grafi indiretti
+│   ├── ui/                 # Componenti dell'interfaccia utente (PyQt6)
+│   │   ├── calibration_window.py  # Finestra per calibrare e associare i nodi al sensore
+│   │   ├── hapticReader_window.py # Finestra per la lettura live del grafo tattile con feedback vocale
+│   │   ├── landing_window.py      # Finestra principale (Drag&Drop immagine, opzioni e log)
+│   │   └── panels.py              # Pannelli dinamici (Form) per i parametri specifici dei template
+│   └── utils/              # Script di supporto e integrazione hardware/software
+│       ├── image_helper.py # Utility OpenCV/PyQt per caricamento e ridimensionamento immagini
+│       ├── json_to_scad.py # Generatore OpenSCAD a partire dai layout JSON (usato con ELK)
+│       ├── run_elk.js      # Script Node.js per il calcolo dei layout tramite ELK engine
+│       ├── sensor_reader.py# Classe per la comunicazione Seriale/USB con la scheda (es. NanoVNA)
+│       ├── sensor_worker.py# QThread per la lettura continua dei dati hardware senza bloccare la UI
+│       └── tts_worker.py   # QThread per la sintesi vocale (Text-to-Speech) asincrona e multipiattaforma
+├── uninstall.bat           # Script per rimuovere l'ambiente virtuale e i collegamenti su Windows
+└── uninstall.sh            # Script per rimuovere l'ambiente, i collegamenti e le regole udev su Linux
 ```
-### Configurazione API Key (.env)
-Il progetto utilizza le API di Google Gemini. Crea un file denominato `.env` nella root del progetto e inserisci la tua chiave:
 
-```Snippet di codice
-GEMINI_API_KEY=la_tua_chiave_api_qui
-```
-## Sviluppo e Debug
-Nel file `config.py` è presente la variabile `DEBUG_MODE`.
+## Modalità Debug
 
-- Se impostata su `True`, l'app utilizzerà il `TestClient` (che simula le risposte dell'API in locale con del testo fantoccio). È fondamentale usarlo durante lo sviluppo della UI per non sprecare token API.
+Nel file `config.py` è presente la variabile `DEBUG_MODE` (modificabile anche a runtime dal **menu Opzioni -> Modalità Debug**).
 
-- Impostare su `False` per le generazioni reali.
+- Se **ATTIVATA**, l'app utilizza il `TestClient`. Verranno simulati l'invio e la ricezione di dati senza contattare i server di Google. È fondamentale usarla durante lo sviluppo dell'interfaccia o la creazione dei layout per non consumare la quota API.
+- Se **DISATTIVATA**, verranno effettuate chiamate reali a Gemini.
 
-##  Come aggiungere un nuovo tipo di Schema (Template)
-L'app utilizza il pattern *Strategy*. Per aggiungere il supporto a un nuovo tipo di schema (es. *Flow Chart*):
+## Multithreading e Hardware
+Per evitare "freeze" dell'interfaccia grafica:
+- Le chiamate API sono gestite in modo asincrono tramite `GeminiWorker`.
+- L'hardware (Seriale) è letto in loop da un `SensorWorker` separato. Le letture grezze sono stabilizzate algoritmicamente per ridurre il rumore e i falsi positivi durante la lettura.
+- La sintesi vocale utilizza un `TTSWorker` basato su una struttura a **Queue** thread-safe. Questo previene crash di **pyttsx3**/motori COM e blocchi UI, assicurando un'esperienza fluida anche se l'utente tocca i nodi velocemente.
 
-1.  **Crea i Prompt**: Crea una nuova cartella in `src/prompts/` (es. `FlowChart/`) e aggiungi due file: `phase1.txt` e `phase2.txt`, contenenti i prompt testuali effettivi per la prima fase di analisi dell'immagine e per la seconda fase di costruzione del modello 3D.
+## Come aggiungere un nuovo tipo di Schema (Pattern Strategy)
+Per aggiungere il supporto a un nuovo tipo di diagramma da processare con l'IA:
+- **Crea i Prompt**: Crea una nuova cartella in `src/prompts/` (es. `NuovoSchema/`) e aggiungi due file: `phase1.txt` (Vision-to-Text) e `phase2.txt` (Text-to-SCAD).
+- **Crea la Logica Prompt**: In `src/prompts/templates.py`, crea una classe che eredita da `BaseTemplate`. Implementa i metodi `get_phase_1()` e `get_phase_2()` per iniettare i parametri dell'utente nel testo.
+- **Crea il Pannello UI**: In `src/ui/panels.py`, crea una classe che eredita da `BaseTemplatePanel`. Crea qui il form (campi di testo, spinbox) per raccogliere i dati specifici dal frontend.
+- **Registra il Template**: In `src/ui/landing_window.py`, aggiungi il nuovo pannello allo `QStackedWidget` nella colonna di destra e aggiungi una nuova azione checkable nel menu in alto ("Template").
 
-2.  **Crea la Logica Prompt**: In `src/prompts/templates.py`, crea una classe che eredita da `BasePrompt` che implementi la logica di caricamento dei nuovi file txt o la parametrizzazione di questa, ove necessario.
-
-3.  **Crea il Pannello UI**: In `src/ui/panels.py`, crea un nuovo Form (es. `FlowChartPanel`) per raccogliere gli input specifici dall'utente (es. numero di blocchi decisionali).
-
-4.  **Registra il Template**: In `landing_window.py`, aggiungi il nuovo pannello allo `stacked_widget` e crea una nuova voce nel menu "Template".
+## Disinstallazione
+Se desideri rimuovere il software e pulire il sistema (inclusi gli ambienti virtuali e le regole USB su Linux):
+- **Windows**: Esegui `uninstall.bat`.
+- **Linux**: Esegui `./uninstall.sh`.
