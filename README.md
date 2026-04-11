@@ -72,6 +72,41 @@ Questa è la modalità di utilizzo per l'utente finale. Permette l'esplorazione 
 # Note di Sviluppo e Architettura
 Il progetto è costruito per essere modulare, reattivo ed estensibile.
 
+## Struttura del Progetto
+```text
+HaptyGraph/
+├── .env                    # (Da creare) Contiene le chiavi API (es. GEMINI_API_KEY)
+├── config.py               # Variabili globali, path e toggle DEBUG_MODE
+├── install.bat             # Script di installazione automatica per Windows
+├── install.sh              # Script di installazione automatica per Linux/macOS
+├── main.py                 # Entry-point dell'applicazione PyQt6
+├── requirements.txt        # Elenco delle dipendenze Python del progetto
+├── src/                    # Codice sorgente principale
+│   ├── api_client.py       # Gestione delle chiamate a Gemini (Client reale e TestClient)
+│   ├── models/
+│   │   └── graph_models.py # Classi dati (Node, HapticGraph) e logica di salvataggio/caricamento JSON
+│   ├── prompts/            # Logica e testi per i prompt inviati all'IA
+│   │   ├── templates.py    # Classi base e implementazioni dei vari template per diagrammi
+│   │   ├── DirectGraph/    # Prompt (Fase 1 e 2) per grafi diretti
+│   │   ├── FlowChart/      # Prompt (Fase 1 e 2) per diagrammi di flusso
+│   │   ├── Set/            # Prompt (Fase 1 e 2) per la teoria degli insiemi
+│   │   └── UndirectGraph/  # Prompt (Fase 1 e 2) per grafi indiretti
+│   ├── ui/                 # Componenti dell'interfaccia utente (PyQt6)
+│   │   ├── calibration_window.py  # Finestra per calibrare e associare i nodi al sensore
+│   │   ├── hapticReader_window.py # Finestra per la lettura live del grafo tattile con feedback vocale
+│   │   ├── landing_window.py      # Finestra principale (Drag&Drop immagine, opzioni e log)
+│   │   └── panels.py              # Pannelli dinamici (Form) per i parametri specifici dei template
+│   └── utils/              # Script di supporto e integrazione hardware/software
+│       ├── image_helper.py # Utility OpenCV/PyQt per caricamento e ridimensionamento immagini
+│       ├── json_to_scad.py # Generatore OpenSCAD a partire dai layout JSON (usato con ELK)
+│       ├── run_elk.js      # Script Node.js per il calcolo dei layout tramite ELK engine
+│       ├── sensor_reader.py# Classe per la comunicazione Seriale/USB con la scheda (es. NanoVNA)
+│       ├── sensor_worker.py# QThread per la lettura continua dei dati hardware senza bloccare la UI
+│       └── tts_worker.py   # QThread per la sintesi vocale (Text-to-Speech) asincrona e multipiattaforma
+├── uninstall.bat           # Script per rimuovere l'ambiente virtuale e i collegamenti su Windows
+└── uninstall.sh            # Script per rimuovere l'ambiente, i collegamenti e le regole udev su Linux
+```
+
 ## Modalità Debug
 
 Nel file `config.py` è presente la variabile `DEBUG_MODE` (modificabile anche a runtime dal **menu Opzioni -> Modalità Debug**).
