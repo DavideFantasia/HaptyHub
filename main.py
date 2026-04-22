@@ -1,13 +1,13 @@
 import sys
 from PyQt6.QtWidgets import QApplication
-from src.ui.landing_window import LandingWindow
+from src.ui.HaptyHub import HaptyHub
 
 def main():
     # Crea l'applicazione Qt
     app = QApplication(sys.argv)
     
     # Crea e mostra la finestra di landing
-    window = LandingWindow()
+    window = HaptyHub()
     window.show()
     
     # Esegui il ciclo degli eventi dell'app
