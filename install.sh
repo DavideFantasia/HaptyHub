@@ -1,8 +1,33 @@
 #!/bin/bash
 
 echo "==========================================="
-echo " Installazione di HaptyGraph - Lettore NVA "
+echo " Installazione di HaptyHub "
 echo "==========================================="
+
+
+# ==========================================
+# CONTROLLO DIPENDENZE DI SISTEMA
+# ==========================================
+echo "Controllo delle dipendenze di sistema..."
+
+# Controllo Node.js (necessario per ELK)
+if ! command -v node &> /dev/null; then
+    echo "Node.js non trovato. Installazione in corso..."
+    sudo apt-get update
+    sudo apt-get install -y nodejs npm
+else
+    echo "✔️ Node.js è già installato."
+fi
+
+# Controllo OpenSCAD (necessario per la generazione 3D)
+if ! command -v openscad &> /dev/null; then
+    echo "OpenSCAD non trovato. Installazione in corso..."
+    sudo apt-get update
+    sudo apt-get install -y openscad
+else
+    echo "✔️ OpenSCAD è già installato."
+fi
+# ==========================================
 
 # 1. Creazione dell'ambiente virtuale Python
 echo "[1/5] Creazione dell'ambiente virtuale (venv)..."

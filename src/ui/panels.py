@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFormLayout,
                              QSpinBox, QLineEdit, QLabel, QTextEdit)
 from src.prompts.templates import DirectGraphTemplate, UndirectGraphTemplate, FlowChartTemplate, SetTheoryTemplate
 
+from src.prompts.templates import ElkFlowChartTemplate # Per la pipeline Android/ELK
+
 class BaseTemplatePanel(QWidget):
     """Interfaccia base per i pannelli. Tutti devono poter generare un oggetto Template."""
     def get_prompt_object(self):
@@ -78,3 +80,15 @@ class SetTheoryPanel(BaseTemplatePanel):
 
     def get_prompt_object(self):
         return SetTheoryTemplate()
+    
+# ELK BASED PANEL
+
+class ELK_FlowChartPanel(BaseTemplatePanel):
+    """Pannello per Flow Chart per la Pipeline Android, al momento senza parametri specifici."""
+    def __init__(self):
+        super().__init__()
+        layout = QFormLayout(self)
+
+    def get_prompt_object(self):
+        # Raccoglie i dati dalla UI e crea l'oggetto pronto per le API
+        return ElkFlowChartTemplate()
