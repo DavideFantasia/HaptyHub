@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from src.ui.panels import ELK_FlowChartPanel
+from src.ui.panels import ELK_FlowChartPanel, ELK_GraphFormPanel
 
 # Importa la configurazione e gli helper
 import config, json, subprocess, time
@@ -166,13 +166,13 @@ class AndroidModelWindow(QMainWindow):
         # NOTA: Per Android, questi pannelli dovrebbero restituire i nuovi "ElkTemplates" 
         # (quelli che hanno get_phase_2 = None) per avviare la pipeline corretta.
         self.panel_flow = ELK_FlowChartPanel()                   # Indice 0
-        #self.panel_dir = GraphFormPanel(is_directed=True)       # Indice 1
-        #self.panel_undir = GraphFormPanel(is_directed=False)    # Indice 2
+        self.panel_dir = ELK_GraphFormPanel(is_directed=True)       # Indice 1
+        self.panel_undir = ELK_GraphFormPanel(is_directed=False)    # Indice 2
         #self.panel_set = SetTheoryPanel()                       # Indice 3
         
         self.stacked_widget.addWidget(self.panel_flow)
-        #self.stacked_widget.addWidget(self.panel_dir)
-        #self.stacked_widget.addWidget(self.panel_undir)
+        self.stacked_widget.addWidget(self.panel_dir)
+        self.stacked_widget.addWidget(self.panel_undir)
         #self.stacked_widget.addWidget(self.panel_set)
 
         self.stacked_widget.setCurrentIndex(0)
