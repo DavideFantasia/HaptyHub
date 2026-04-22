@@ -1,5 +1,5 @@
-# HaptyGraph
-HaptyGraph è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM e Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
+# HaptyHub
+HaptyHub è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM e Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
 Oltre alla generazione del modello 3D, il software si interfaccia con hardware esterno per **rendere i modelli 3D interattivi**: toccando i nodi del modello stampato, l'applicazione riconosce il tocco e legge ad alta voce la descrizione del nodo tramite sintesi vocale (Text-to-Speech).
 
 L'obiettivo principale è favorire l'accessibilità allo studio per studenti ciechi o ipovedenti (Low Vision), permettendo la stampa 3D rapida di materiale didattico e l'esplorazione aptica interattiva.
@@ -11,8 +11,8 @@ Per eseguire il software è necessario avere [Python 3](https://www.python.org/d
 
 ## 1.    Clonare il repository
 ```bash
-git clone git@github.com:DavideFantasia/HaptyGraph.git
-cd HaptyGraph
+git clone git@github.com:DavideFantasia/HaptyHub.git
+cd HaptyHub
 ```
 
 ## 2. Eseguire l'installazione automatica
@@ -74,7 +74,7 @@ Il progetto è costruito per essere modulare, reattivo ed estensibile.
 
 ## Struttura del Progetto
 ```text
-HaptyGraph/
+HaptyHub/
 ├── .env                    # (Da creare) Contiene le chiavi API (es. GEMINI_API_KEY)
 ├── config.py               # Variabili globali, path e toggle DEBUG_MODE
 ├── install.bat             # Script di installazione automatica per Windows
