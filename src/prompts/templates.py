@@ -11,7 +11,7 @@ class BaseTemplate(ABC):
         pass
 
     @abstractmethod
-    def get_phase_2(self) -> str:
+    def get_phase_2(self) -> str | None:
         """Restituisce il system prompt per la generazione del codice."""
         pass
 
@@ -29,7 +29,7 @@ class GraphTemplate(BaseTemplate):
         self.edges = edges
         self.subject = subject
         self.is_directed = is_directed
-        self.__prompt_path = os.path.join(config.PROMPT_DIR, "DirectGraph") if is_directed else os.path.join(config.PROMPT_DIR, "UndirectGraph")
+        self.__prompt_path = os.path.join(config.PROMPT_DIR, "basic", "DirectGraph") if is_directed else os.path.join(config.PROMPT_DIR,"basic", "UndirectGraph")
 
         self.__prompt1 = ""
         self.__prompt2 = ""
@@ -66,7 +66,7 @@ class FlowChartTemplate(BaseTemplate):
         self.nodes = nodes
         self.edges = edges
         self.subject = subject
-        self.__prompt_path = os.path.join(config.PROMPT_DIR, "FlowChart")
+        self.__prompt_path = os.path.join(config.PROMPT_DIR, "basic", "FlowChart")
 
         self.__prompt1 = ""
         self.__prompt2 = ""
@@ -77,6 +77,7 @@ class FlowChartTemplate(BaseTemplate):
         subject = self.subject if self.subject else ""
         base_prompt = self.get_from_file(os.path.join(self.__prompt_path, "phase1.txt"))
         added_prompt = (f"I am attaching a Flow Chart graph used during a {subject} lesson. The Flow Chart Graph consists of {node_count} nodes and {edge_count} edges.")
+        self.__prompt1 = base_prompt + "\n\n" + added_prompt
         return self.__prompt1
     
     def get_phase_2(self) -> str:
@@ -89,3 +90,28 @@ class SetTheoryTemplate(BaseTemplate):
         return "TODO" # Da definire
     def get_phase_2(self) -> str:
         return "TODO"
+    
+# =============================================
+# Template per Maschere per Tablet
+# =============================================
+class ElkBaseTemplate(BaseTemplate):
+    """Classe base per i template destinati ai tablet, che usano solo la Fase 1 (JSON)."""
+    
+    def get_phase_2(self) -> None:
+        # Per le pipeline ELK, la fase 2 di Gemini non serve!
+        return None
+
+
+
+
+class ElkFlowChartTemplate(ElkBaseTemplate):
+    """Template ELK specifico per l'estrazione di diagrammi di flusso."""
+    
+    def __init__(self):
+        self.__prompt_path = os.path.join(config.PROMPT_DIR, "interactive")
+        self.__prompt1 = ""
+
+    def get_phase_1(self) -> str:
+        base_prompt = self.get_from_file(os.path.join(self.__prompt_path, "FlowChart.txt"))
+        self.__prompt1 = base_prompt
+        return self.__prompt1
