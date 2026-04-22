@@ -1,12 +1,12 @@
-PyQt6==6.10.2 # per la creazione dell'interfaccia grafica
-PyQt6-Qt6==6.10.2 # per la gestione delle dipendenze di Qt6
-PyQt6_sip==13.11.1 # per la gestione delle estensioni C++ di PyQt6
-python-dotenv==1.2.2 # per la gestione delle variabili d'ambiente
-opencv-python-headless # per la gestione delle immagini e video
-pillow # per la gestione delle immagini
-google-genai # per l'integrazione con Gemini
-pyserial # per la comunicazione con la scheda
-scipy # per il processing dei segnali dalla scheda
-pyqtgraph # per la visualizzazione dei dati in tempo reale
-pyttsx3 # per la sintesi vocale
-pywin32 # per l'integrazione con Windows COM
+python-dotenv   # per la gestione delle variabili d'ambiente
+opencv-python-headless 	# per la gestione delle immagini e video
+pillow			# per la gestione delle immagini
+google-genai		# per l'integrazione con Gemini
+pyserial		# per la comunicazione con la scheda
+scipy			# per il processing dei segnali dalla scheda
+pyqtgraph		# per la visualizzazione dei dati in tempo reale
+pyttsx3			# per la sintesi vocale
+pywin32; sys_platform == 'win32'			# per l'integrazione con Windows COM
+PyQt6			# per la creazione dell'interfaccia grafica
+PyQt6-Qt6		# per la gestione delle dipendenze di Qt6
+PyQt6_sip		# per la gestione delle estensioni C++ di PyQt6
