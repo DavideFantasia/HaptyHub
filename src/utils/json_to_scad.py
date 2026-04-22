@@ -1,144 +1,114 @@
 import json
 
 
-# In order to modify the dimensions of the component of the flowchart, you can adjust the following constants in the generated OpenSCAD file:
-# - `base_width` and `base_height`: These control the overall size of the baseplate. You can set these to 130 and 200 respectively for a 130x200mm base.
-# - `block_size`: This controls the size of the building blocks (circles, squares, diamonds, trapezoids). Adjust this to make the shapes larger or smaller.
-# - `outline_thickness`: This controls how thick the raised walls of the shapes are. Increasing this will make the walls thicker and the holes smaller, while decreasing it will do the opposite.
-# - `edge_radius`: This controls how thick the pipes are. Adjust this to make the pipes wider or narrower.
-# - `arrow_length` and `arrow_width`: These control the size of the arrowheads at the end of each edge. Adjust these to make the arrows larger or smaller.
-# - `bb_h`: This controls how tall the raised building blocks are. Adjust this to make the blocks taller or shorter.
-# - `grid_spacing`: the number after base_width and base_height in the calculation determines how much margin u leave around the edges of the layout. Increasing the 20 to a larger number will create more space around the edges, while decreasing it will allow the layout to stretch closer to the edges of the baseplate.
-
-
 def generate_scad(json_filepath, scad_filepath):
-    # ---------------------------------------------------------
-    # STEP 1: LOAD THE ELK DATA
-    # ---------------------------------------------------------
+    # 1. LOAD & PARSE DATA
     with open(json_filepath, 'r') as file:
         data = json.load(file)
 
-    nodes = []
+    # Store the dimensions of the tablet screen
+    screen_width = data.get('screen_width', 0)
+    screen_height = data.get('screen_height', 0)
+
+    #================= EXPERIMENTAL ======================================
+
+    # Margins for the bezels around the screen
+    margin_top = data.get('margin_top', 18)       # Distance from top of screen to top edge of tablet
+    margin_bottom = data.get('margin_bottom', 18) # Distance from bottom of screen to bottom edge
+    margin_left = data.get('margin_left', 14)     # Distance from left of screen to left edge
+    margin_right = data.get('margin_right', 14)   # Distance from right of screen to right edge
+    
+
+    # Title of the board
+    board_title = data.get('board_title', 'Flowchart 1')  # Defaults to 'Flowchart' if not found
+
+
+    #=====================================================================
+
+
+    # Store nodes in a dictionary keyed by ID for easy access later
+    nodes = {}
+    for n in data.get('children', []):
+        cx = n['x'] + (n['width'] / 2.0)
+        cy = n['y'] + (n['height'] / 2.0)
+        nodes[n['id']] = {
+            'shape': n.get('myCustomShape', 'square'),
+            'x': cx, 'y': -cy, 
+            'raw_x': cx, 'raw_y': cy
+        }
+
     edges = []
-    
-    # We track the extreme edges of the layout to calculate the bounding box.
-    # This ensures we know exactly how wide and tall the ELK layout is so we 
-    # can shrink or stretch it to fit your 130x200mm baseplate.
-    min_x = float('inf')
-    max_x = float('-inf')
-    min_y = float('inf')
-    max_y = float('-inf')
+    # Track all coordinates (nodes and edge bends) to calculate the bounding box
+    all_x = [n['x'] for n in nodes.values()]
+    all_y = [n['y'] for n in nodes.values()]
 
-    # ---------------------------------------------------------
-    # STEP 2: PARSE THE NODES (BUILDING BLOCKS)
-    # ---------------------------------------------------------
-    for node in data.get('children', []):
-        shape = node.get('myCustomShape', 'square')
-        
-        # ELK gives us the "Top-Left" corner of the invisible bounding box.
-        # OpenSCAD draws from the "Center". So we add half the width/height.
-        raw_cx = node['x'] + (node['width'] / 2.0)
-        raw_cy = node['y'] + (node['height'] / 2.0)
-        
-        # ELK's Y-axis goes DOWN. OpenSCAD's Y-axis goes UP.
-        # We invert the Y coordinate here so the flowchart doesn't print upside down.
-        scad_cx = raw_cx
-        scad_cy = -raw_cy
-        
-        # Save both the raw (for pipe routing) and SCAD (for boundaries) coordinates
-        nodes.append({
-            'id': node['id'], 'shape': shape, 
-            'x': scad_cx, 'y': scad_cy, 
-            'raw_x': raw_cx, 'raw_y': raw_cy
-        })
-        
-        # Update our layout boundaries
-        min_x = min(min_x, scad_cx)
-        max_x = max(max_x, scad_cx)
-        min_y = min(min_y, scad_cy)
-        max_y = max(max_y, scad_cy)
+    for e in data.get('edges', []):
+        src, tgt = nodes[e['source']], nodes[e['target']]
+        label = e.get('labels', [{'text': None}])[0]['text'] if e.get('labels') else None
 
-    # ---------------------------------------------------------
-    # STEP 3: PARSE THE EDGES (PIPES AND ARROWS)
-    # ---------------------------------------------------------
-    for edge in data.get('edges', []):
-        # Find which nodes this edge connects
-        source_node = next(n for n in nodes if n['id'] == edge['source'])
-        target_node = next(n for n in nodes if n['id'] == edge['target'])
-        
-        # Grab the text label (e.g., "Yes", "No") if it exists
-        labels = edge.get('labels', [])
-        label_text = labels[0]['text'] if labels else None
-
-        for section in edge.get('sections', []):
-            # Combine the start point, the 90-degree corners, and the end point into one list
+        for section in e.get('sections', []):
             raw_pts = [section['startPoint']] + section.get('bendPoints', []) + [section['endPoint']]
+            # Snap ends exactly to node centers
+            raw_pts[0], raw_pts[-1] = {'x': src['raw_x'], 'y': src['raw_y']}, {'x': tgt['raw_x'], 'y': tgt['raw_y']}
             
-            # CRITICAL FIX: Overwrite the start/end points with the exact node centers.
-            # ELK stops the line at the invisible box wall. By forcing the line to the true center,
-            # OpenSCAD can use its own shape_radius math to trim the pipe perfectly to the physical shape.
-            raw_pts[0] = {'x': source_node['raw_x'], 'y': source_node['raw_y']}
-            raw_pts[-1] = {'x': target_node['raw_x'], 'y': target_node['raw_y']}
+            scad_pts = [[p['x'], -p['y']] for p in raw_pts]
+            edges.append({'points': scad_pts, 'src': src['shape'], 'tgt': tgt['shape'], 'label': label})
             
-            # Convert all pipe coordinates to OpenSCAD's inverted Y-axis
-            scad_pts = []
-            for p in raw_pts:
-                px = p['x']
-                py = -p['y']
-                scad_pts.append([px, py])
-                
-                # We also check the pipe corners against our boundaries so the elbows don't fall off the base
-                min_x = min(min_x, px)
-                max_x = max(max_x, px)
-                min_y = min(min_y, py)
-                max_y = max(max_y, py)
-                
-            edges.append({
-                'points': scad_pts,
-                'source_shape': source_node['shape'],
-                'target_shape': target_node['shape'],
-                'label': label_text
-            })
+            # Add edge points to boundary tracking
+            all_x.extend([p[0] for p in scad_pts])
+            all_y.extend([p[1] for p in scad_pts])
 
-    # ---------------------------------------------------------
-    # STEP 4: GENERATE THE OPENSCAD TEXT
-    # ---------------------------------------------------------
-    scad = []
-    
-    # Write the header and physical dimensions
-    scad.append("""// --- GLOBAL SETTINGS & CONSTANTS ---
-$fn = 50;
-                // Baseplate dimensions of the Samsung Tab A 2016 with S pen
-base_width = 135;
-base_height = 217;
+    # Calculate boundaries
+    min_x, max_x = min(all_x), max(all_x)
+    min_y, max_y = min(all_y), max(all_y)
+
+    # 2. OPENSCAD TEMPLATE (Notice all double brackets {{ }} for OpenSCAD logic)
+    scad = f"""// --- GLOBAL SETTINGS & CONSTANTS ---
+
+use <braille.scad>;
+$fn = 64;
+base_width = {screen_width};
+base_height = {screen_height};
 base_thickness = 2;
+rounding_radius = 1; 
 
-block_size = 15;
-radius_circle = 7.5;
-radius_square = 7.5;
 
-// AUTOMATIC MATH: The pointy corner of a square rotated 45 degrees is (size/2) * sqrt(2)
-radius_diamond = (block_size / 2) * sqrt(2); 
-radius_trapezoid = 12;
+// ============= EXPERIMENTAL ==============
+// Hardware dimensions
+margin_top = {margin_top};
+margin_bottom = {margin_bottom};
+margin_left = {margin_left};
+margin_right = {margin_right};
 
+
+// Calculate total physical size of the tablet
+//tablet_actual_width = base_width + margin_left + margin_right + 1;
+//tablet_actual_height = base_height + margin_top + margin_bottom + 1;
+
+//Dimensions of the actual tablet (for reference, not necessarily the size of the printed baseplate)
+tablet_actual_width = 164.2; 
+tablet_actual_height = 254.2;
+
+// ========================================
+
+block_size = 17;   
 outline_thickness = 1;
-bb_h = 4;
-edge_radius = 1.25;
-shape_radius = (block_size / 2) + 1; // Standard +1mm gap to prevent overlapping
+bb_h = 2; 
+edge_radius = 1; 
+
+shape_radius = (block_size / 2) + 1;
+radius_diamond = (block_size / 2) * sqrt(2); 
+radius_trapezoid = (block_size / 2) + (block_size * 0.15); 
+
 arrow_length = 4;
 arrow_width = 3.5;
-margin_x = 14.115; // The minimum empty space on the left and right
-margin_y = 18.325; // The minimum empty space on the top and bottom
-// --- DYNAMIC GRID & SPACING ---""")
-    
-    # Write the layout boundaries we calculated in Python into SCAD
-    scad.append(f"min_x = {min_x}; max_x = {max_x};")
-    scad.append(f"min_y = {min_y}; max_y = {max_y};")
-    
-    # This OpenSCAD math calculates exactly how much to scale and shift the ELK coordinates
-    # so they fit perfectly centered on the 130x200 baseplate with a 10mm margin.
-    scad.append("""
-                
+margin_x = 10; // TODO reduce to 5
+margin_y = 10; // TODO reduce to 5
+
+// --- DYNAMIC GRID & SPACING ---
+min_x = {min_x}; max_x = {max_x};
+min_y = {min_y}; max_y = {max_y};
+
 safe_margin_x = margin_x + (block_size / 2);
 safe_margin_y = margin_y + (block_size / 2);
 grid_spacing = min((base_width - (safe_margin_x * 2)) / max(1, (max_x - min_x)), 
@@ -146,182 +116,134 @@ grid_spacing = min((base_width - (safe_margin_x * 2)) / max(1, (max_x - min_x)),
                 
 x_offset = (base_width / 2) - ((min_x + max_x) / 2 * grid_spacing);
 y_offset = (base_height / 2) - ((min_y + max_y) / 2 * grid_spacing);
-
-// A helper function that scales and shifts every single coordinate automatically
 function scale_p(p) = [p[0] * grid_spacing + x_offset, p[1] * grid_spacing + y_offset];
 
-// --- SOLID PRIMITIVES ---
-// These are the base 2D shapes used for both the raised walls and the hollow holes
-module solid_circle() { circle(d = block_size, $fn=64); }
-module solid_trapezoid() { slant = block_size * 0.15; polygon([[-block_size/2+slant, block_size/2], [block_size/2+slant, block_size/2], [block_size/2-slant, -block_size/2], [-block_size/2-slant, -block_size/2]]); }
-module solid_diamond() { rotate([0, 0, 45]) square([block_size, block_size], center=true); }
-module solid_square() { square([block_size, block_size], center=true); }
+// --- SOLID PRIMITIVES & HELPER MODULES ---
+module draw_shape(type) {{
+    if (type == "circle") circle(d = block_size, $fn=64);
+    else if (type == "trapezoid") offset(r = rounding_radius) polygon([[-block_size/2+(block_size*0.15), block_size/2], [block_size/2+(block_size*0.15), block_size/2], [block_size/2-(block_size*0.15), -block_size/2], [-block_size/2-(block_size*0.15), -block_size/2]]);
+    else if (type == "diamond") offset(r = rounding_radius) rotate([0, 0, 45]) square([block_size, block_size], center=true);
+    else offset(r = rounding_radius) square([block_size, block_size], center=true);
+}}
+
+module place_node(x, y, type, mode="wall") {{
+    p = scale_p([x, y]);
+    if (mode == "hole") {{
+        translate([p[0], p[1], -1]) 
+            linear_extrude(base_thickness + 2) 
+                offset(delta=-outline_thickness) union() {{ draw_shape(type); }}
+    }} else {{
+        // Sunk 0.1mm into the baseplate to prevent "floating" geometry
+        translate([p[0], p[1], base_thickness - 0.1]) {{
+            difference() {{
+                linear_extrude(bb_h + 0.1) union() {{ draw_shape(type); }}
+                translate([0, 0, -0.1]) 
+                    linear_extrude(bb_h + 1) 
+                        offset(delta=-outline_thickness) union() {{ draw_shape(type); }}
+            }}
+        }}
+    }}
+}}
 
 // --- EDGE ROUTING MODULES ---
-// Draws a single pipe segment. It checks if it's touching a shape, and if so, trims its own length using 'start_gap' or 'end_gap'.
-module edge_segment_direct(p1, p2, is_start=false, is_end=false, source_shape_type="square", target_shape_type="square") {
-    p1s = scale_p(p1); 
-    p2s = scale_p(p2);
-    dx = p2s[0] - p1s[0]; 
-    dy = p2s[1] - p1s[1];
-    dist = sqrt(dx*dx + dy*dy); 
-    angle = atan2(dy, dx);
-    
-    start_gap_dist = (source_shape_type == "diamond") ? (radius_diamond + 1) : shape_radius;
-    start_gap = is_start ? start_gap_dist : 0;
-    
-    end_gap_dist = (target_shape_type == "diamond") ? (radius_diamond + 1) : shape_radius;
-    end_gap = is_end ? (end_gap_dist + arrow_length) : 0;
-    
-    len = dist - start_gap - end_gap;
-    if (len > 0) {
-        translate([p1s[0] + cos(angle)*start_gap, p1s[1] + sin(angle)*start_gap, base_thickness])
-            rotate([0, 90, angle]) 
-                cylinder(h = len, r = edge_radius, $fn=24);
-    }
-}
+module edge_segment(p1, p2, is_start=false, is_end=false, src="square", tgt="square") {{
+    p1s = scale_p(p1); p2s = scale_p(p2);
+    dx = p2s[0] - p1s[0]; dy = p2s[1] - p1s[1];
+    dist = sqrt(dx*dx + dy*dy); angle = atan2(dy, dx);
+    sg = is_start ? ((src == "diamond" ? radius_diamond + 2 : shape_radius + 1)) : 0;
+    eg = is_end ? ((tgt == "diamond" ? radius_diamond + 2 : shape_radius + 1) + arrow_length) : 0;
+    if (dist - sg - eg > 0) translate([p1s[0] + cos(angle)*sg, p1s[1] + sin(angle)*sg, base_thickness]) rotate([0, 90, angle]) cylinder(h = dist - sg - eg, r = edge_radius, $fn=24);
+}}
 
-// Drops a small sphere at 90-degree turns to make the outside corner look perfectly rounded
-module edge_elbow_sphere(p) {
-    v = scale_p(p);
-    translate([v[0], v[1], base_thickness]) sphere(r = edge_radius, $fn=32);
-}
+module edge_elbow(p) {{ 
+    v = scale_p(p); 
+    // Sunk slightly to ensure safe 3D printing
+    translate([v[0], v[1], base_thickness - 0.1]) sphere(r = edge_radius, $fn=32); 
+}}
 
-// Draws the triangle arrowhead, pulling it back by gap_dist so its tip just kisses the shape outline
-module edge_arrow_triangle(p1, p2, target_shape_type="square") {
-    p1s = scale_p(p1);
-    p2s = scale_p(p2);
-    dx = p2s[0] - p1s[0];
-    dy = p2s[1] - p1s[1];
-    angle = atan2(dy, dx);
-    dist = sqrt(dx*dx + dy*dy);
-    if(dist > 0) {
-        ux = dx / dist;
-        uy = dy / dist;
-        
-        gap_dist = (target_shape_type == "diamond") ? (radius_diamond + 1) : shape_radius;
-        tip_x = p2s[0] - ux * gap_dist;
-        tip_y = p2s[1] - uy * gap_dist;
+module edge_arrow(p1, p2, tgt="square") {{
+    p1s = scale_p(p1); p2s = scale_p(p2);
+    angle = atan2(p2s[1] - p1s[1], p2s[0] - p1s[0]);
+    gd = (tgt == "diamond") ? radius_diamond + 2 : shape_radius + 1;
+    // Sunk 0.1mm into baseplate
+    translate([p2s[0] - cos(angle)*gd, p2s[1] - sin(angle)*gd, base_thickness - 0.1]) 
+        rotate([0, 0, angle]) 
+            linear_extrude(height = edge_radius + 0.1) 
+                polygon(points=[[0, 0], [-arrow_length, -arrow_width / 2], [-arrow_length, arrow_width / 2]]);
+}}
 
-        translate([tip_x, tip_y, base_thickness])
-            rotate([0, 0, angle])
-                linear_extrude(height = edge_radius)
-                    polygon(points=[[0, 0], [-arrow_length, -arrow_width / 2], [-arrow_length,  arrow_width / 2]]);
-    }
-}
-
-// Finds the exact middle of an edge and drops the text label slightly to the side
-module edge_weight_label(p1, p2, label_text) {
-    p1s = scale_p(p1);
-    p2s = scale_p(p2);
-    mid_x = (p1s[0] + p2s[0]) / 2;
-    mid_y = (p1s[1] + p2s[1]) / 2;
-    dx = p2s[0] - p1s[0];
-    dy = p2s[1] - p1s[1];
-    angle = atan2(dy, dx);
-    
-    adj_angle = (angle > 90 || angle < -90) ? angle + 180 : angle; // Keeps text right-side up
-    ox = -sin(angle) * 5; // 5mm offset
-    oy = cos(angle) * 5;
-
-    translate([mid_x + ox, mid_y + oy, 3])
-        rotate([0, 0, adj_angle])
-            linear_extrude(height = 1)
-                text(label_text, size=4, spacing=1.5, valign="center", halign="center");
-}
+module edge_label(p1, p2, text_val) {{
+    p1s = scale_p(p1); p2s = scale_p(p2);
+    angle = atan2(p2s[1] - p1s[1], p2s[0] - p1s[0]);
+    adj_angle = (angle > 90 || angle < -90) ? angle + 180 : angle; 
+    // Sunk 0.1mm into baseplate
+    translate([(p1s[0] + p2s[0])/2 - sin(angle)*5, (p1s[1] + p2s[1])/2 + cos(angle)*5, base_thickness - 0.1])
+        rotate([0, 0, adj_angle]) 
+            linear_extrude(height=1.1) 
+                text(text_val, size=4, spacing=1.5, valign="center", halign="center");
+}}
 
 // --- TOP LEVEL RENDERING ---
-union() {
-    // SECTION 1: THE BASE
-    difference() {
-        translate([0, 0, 0]) cube([base_width, base_height, base_thickness], center=false);
-        
-        // Loop to cut holes through the base floor
-""")
-    # ---------------------------------------------------------
-    # WRITE HOLE CUTTERS
-    # ---------------------------------------------------------
-    for node in nodes:
-        shape_call = f"solid_{node['shape']}()"
-        scad.append(f"        translate([scale_p([{node['x']}, {node['y']}])[0], scale_p([{node['x']}, {node['y']}])[1], -1]) linear_extrude(base_thickness + 2) offset(delta=-outline_thickness) {shape_call};")
-    
-    scad.append("""    }
-    
-    // SECTION 2: RAISED BUILDING BLOCKS
-""")
-    
-    # ---------------------------------------------------------
-    # WRITE RAISED WALLS
-    # ---------------------------------------------------------
-    for node in nodes:
-        shape_call = f"solid_{node['shape']}()"
-        scad.append("    difference() {")
-        scad.append(f"        translate([scale_p([{node['x']}, {node['y']}])[0], scale_p([{node['x']}, {node['y']}])[1], base_thickness]) linear_extrude(bb_h) {shape_call};")
-        scad.append(f"        translate([scale_p([{node['x']}, {node['y']}])[0], scale_p([{node['x']}, {node['y']}])[1], base_thickness - 0.1]) linear_extrude(bb_h + 1) offset(delta=-outline_thickness) {shape_call};")
-        scad.append("    }")
+union() {{
+    difference() {{
+        // TODO remove comment: cube([base_width, base_height, base_thickness]);
 
-    scad.append("\n    // SECTION 3: EDGES, ARROWHEADS, & LABELS")
-    
-    # ---------------------------------------------------------
-    # WRITE EDGES AND PIPES
-    # ---------------------------------------------------------
-    for edge in edges:
-        pts = edge['points']
-        source = edge['source_shape']
-        target = edge['target_shape']
-        
-        longest_dist = -1
-        longest_segment = None
+        // ======== EXPERIMENTAL =================================================
+        // --- CHANGED: A SINGLE FLAT PLATE ---
+        // We shift left and down by the margins to cover the bezels, 
+        // leaving [0,0] perfectly aligned with the bottom-left of the glowing screen.
+        translate([-margin_left, -margin_bottom, 0])
+            cube([tablet_actual_width, tablet_actual_height, base_thickness]);
 
-        # Loop through coordinate pairs (A->B, B->C) to draw segments
+        //===========================================================================
+        
+"""
+    # 3. BUILD THE SCAD SCRIPT
+    scad_lines = [scad]
+
+    # Holes
+    for n in nodes.values():
+        scad_lines.append(f"        place_node({n['x']}, {n['y']}, \"{n['shape']}\", \"hole\");")
+
+
+
+    scad_lines.append("    }\n")
+
+    # Raised Walls
+    for n in nodes.values():
+        scad_lines.append(f"    place_node({n['x']}, {n['y']}, \"{n['shape']}\", \"wall\");")
+
+    # Edges
+    for e in edges:
+        pts = e['points']
         for i in range(len(pts) - 1):
-            p1 = pts[i]
-            p2 = pts[i+1]
-            is_start = "true" if i == 0 else "false"
-            is_end = "true" if i == len(pts) - 2 else "false"
-            
-            # Draw the straight line
-            scad.append(f"    edge_segment_direct({p1}, {p2}, {is_start}, {is_end}, \"{source}\", \"{target}\");")
-            
-            # If we are past the first coordinate, draw a round corner joint
-            if i > 0:
-                scad.append(f"    edge_elbow_sphere({p1});")
-                
-            # Figure out which straight segment is the longest so we know where to put the text
-            dist_sq = (p2[0]-p1[0])**2 + (p2[1]-p1[1])**2
-            if dist_sq > longest_dist:
-                longest_dist = dist_sq
-                longest_segment = (p1, p2)
-
-        # Draw the arrowhead on the very last segment
-        scad.append(f"    edge_arrow_triangle({pts[-2]}, {pts[-1]}, \"{target}\");")
+            is_start, is_end = ("true" if i == 0 else "false"), ("true" if i == len(pts) - 2 else "false")
+            scad_lines.append(f"    edge_segment({pts[i]}, {pts[i+1]}, {is_start}, {is_end}, \"{e['src']}\", \"{e['tgt']}\");")
+            if i > 0: scad_lines.append(f"    edge_elbow({pts[i]});")
+        scad_lines.append(f"    edge_arrow({pts[-2]}, {pts[-1]}, \"{e['tgt']}\");")
         
-        # Draw the text label next to the longest segment
-        if edge['label'] and longest_segment:
-            scad.append(f"    edge_weight_label({longest_segment[0]}, {longest_segment[1]}, \"{edge['label']}\");")
+        #if e['label']:
+        #    longest = max(zip(pts[:-1], pts[1:]), key=lambda seg: (seg[1][0]-seg[0][0])**2 + (seg[1][1]-seg[0][1])**2)
+        #    scad_lines.append(f"    edge_label({longest[0]}, {longest[1]}, \"{e['label']}\");")
+
+    #================== EXPERIMENTAL ============================
+
+    # --- CHANGED: DRAW THE TITLE IN THE TOP LEFT ---
+    scad_lines.append("    // --- TACTILE TITLE ---")
+    scad_lines.append("    translate([-margin_left + 10, base_height + margin_top - 10, base_thickness])")
+     
+    scad_lines.append(f"        braille(\"{board_title}\");")
+    #============================================================
 
 
-    scad.append("}") # Close the union block
+    scad_lines.append("}")
 
-    scad.append("""
-                // --- MARGIN DEBUGGING FRAME ---
-// The '%' makes this shape transparent and prevents it from being exported for 3D printing.
-%translate([0, 0, base_thickness + 0.1]) 
-    difference() {
-        // Outer box (size of the whole tablet screen)
-        cube([base_width, base_height, 0.5], center=false);
-        
-        // Inner cutout (the "safe zone" created by your margins)
-        translate([margin_x, margin_y, -1])
-            cube([base_width - (margin_x * 2), base_height - (margin_y * 2), 2], center=false);
-    }""")
-
-
-    # Save to file
+    # 4. SAVE FILE
     with open(scad_filepath, 'w') as f:
-        f.write("\n".join(scad))
+        f.write("\n".join(scad_lines))
         
     print(f"Successfully generated final OpenSCAD file: {scad_filepath}")
 
+    
 
 generate_scad('output_coordinates.json', 'flowchart.scad')
