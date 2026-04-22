@@ -40,6 +40,17 @@ pip install --upgrade pip
 pip install -r requirements.txt
 deactivate
 
+echo "[2.5/5] Installazione delle dipendenze Node.js..."
+# Controlliamo se esiste già un package.json (buona pratica)
+if [ -f "package.json" ]; then
+    echo "  -> package.json trovato. Installazione librerie..."
+    npm install
+else
+    echo "  -> package.json non trovato. Inizializzazione e installazione di elkjs..."
+    npm init -y > /dev/null
+    npm install elkjs
+fi
+
 # 3. Configurazione permessi Hardware (Regole udev)
 echo "[3/5] Configurazione dei permessi USB (richiede password amministratore)..."
 UDEV_RULE='KERNEL=="ttyUSB*", MODE="0666"\nKERNEL=="ttyACM*", MODE="0666"'

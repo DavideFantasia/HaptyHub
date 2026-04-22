@@ -24,6 +24,16 @@ if %errorlevel% neq 0 (
     echo [OK] Node.js e' gia' installato.
 )
 
+echo [X] Installazione delle dipendenze Node.js...
+IF EXIST "package.json" (
+    echo   - package.json trovato. Esecuzione npm install...
+    call npm install
+) ELSE (
+    echo   - Inizializzazione Node e installazione elkjs...
+    call npm init -y >nul
+    call npm install elkjs
+)
+
 :: Controllo OpenSCAD
 where openscad >nul 2>nul
 if %errorlevel% neq 0 (

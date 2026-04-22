@@ -270,23 +270,23 @@ class AndroidModelWindow(QMainWindow):
             
             # 2. Salva il file temporaneo
             input_path = os.path.join(config.TEMP_DIR, "temp_graph.json")
-            output_path = os.path.join(config.TEMP_DIR, "output_coords.json")
+            output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
             with open(input_path, "w") as f:
                 json.dump(graph_data, f)
             
             # 3. Esegue ELK (Javascript)
             cmd = ["node", "src/utils/run_elk.js", input_path, output_path]
             subprocess.run(cmd, check=True)
-            
+
             # 4. Converte il risultato in OpenSCAD
             self.update_ui_progress("Conversione coordinate spaziali in modello 3D...")
-            from src.utils.json_to_scad import convert_to_scad
+            from src.utils.json_to_scad import json_to_scad
             
             # Assicurati che la cartella output esista
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
             
-            convert_to_scad(output_path, scad_output)
+            json_to_scad(output_path, scad_output)
             
             self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
             self.send_btn.setEnabled(True)

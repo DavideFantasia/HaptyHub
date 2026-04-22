@@ -1,0 +1,249 @@
+{
+    "id": "root",
+    "layoutOptions": {
+        "elk.algorithm": "layered",
+        "elk.direction": "DOWN",
+        "elk.edgeRouting": "ORTHOGONAL",
+        "elk.spacing.nodeNode": "80",
+        "elk.spacing.edgeNode": "80",
+        "elk.spacing.edgeEdge": "20",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "100",
+        "elk.layered.spacing.edgeNodeBetweenLayers": "40",
+        "elk.layered.layering.strategy": "INTERACTIVE",
+        "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.compaction.postCompaction.strategy": "EDGE_LENGTH",
+        "elk.layered.spacing.dummyNodeNodeBetweenLayers": "10",
+        "elk.edgeLabels.placement": "UNDEFINED"
+    },
+    "children": [
+        {
+            "id": "leave_home",
+            "myCustomShape": "circle",
+            "width": 40,
+            "height": 40,
+            "labels": [
+                {
+                    "text": "Leave home"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "0"
+            },
+            "ports": [
+                {
+                    "id": "leave_home_out_south",
+                    "layoutOptions": {
+                        "elk.port.side": "SOUTH"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "check_time",
+            "myCustomShape": "trapezoid",
+            "width": 50,
+            "height": 50,
+            "labels": [
+                {
+                    "text": "Check time"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "1"
+            },
+            "ports": [
+                {
+                    "id": "check_time_in_north",
+                    "layoutOptions": {
+                        "elk.port.side": "NORTH"
+                    }
+                },
+                {
+                    "id": "check_time_out_south",
+                    "layoutOptions": {
+                        "elk.port.side": "SOUTH"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "before_7am",
+            "myCustomShape": "diamond",
+            "width": 60,
+            "height": 60,
+            "labels": [
+                {
+                    "text": "Before 7 am?"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "2"
+            },
+            "ports": [
+                {
+                    "id": "before_7am_in_north",
+                    "layoutOptions": {
+                        "elk.port.side": "NORTH"
+                    }
+                },
+                {
+                    "id": "before_7am_out_west",
+                    "layoutOptions": {
+                        "elk.port.side": "WEST"
+                    }
+                },
+                {
+                    "id": "before_7am_out_east",
+                    "layoutOptions": {
+                        "elk.port.side": "EAST"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "take_bus",
+            "myCustomShape": "square",
+            "width": 40,
+            "height": 40,
+            "labels": [
+                {
+                    "text": "Take bus"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "3"
+            },
+            "ports": [
+                {
+                    "id": "take_bus_in_north",
+                    "layoutOptions": {
+                        "elk.port.side": "NORTH"
+                    }
+                },
+                {
+                    "id": "take_bus_out_south",
+                    "layoutOptions": {
+                        "elk.port.side": "SOUTH"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "take_subway",
+            "myCustomShape": "square",
+            "width": 40,
+            "height": 40,
+            "labels": [
+                {
+                    "text": "Take subway"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "3"
+            },
+            "ports": [
+                {
+                    "id": "take_subway_in_north",
+                    "layoutOptions": {
+                        "elk.port.side": "NORTH"
+                    }
+                },
+                {
+                    "id": "take_subway_out_south",
+                    "layoutOptions": {
+                        "elk.port.side": "SOUTH"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "reach_school",
+            "myCustomShape": "circle",
+            "width": 40,
+            "height": 40,
+            "labels": [
+                {
+                    "text": "Reach school"
+                }
+            ],
+            "layoutOptions": {
+                "elk.portConstraints": "FIXED_SIDE",
+                "elk.layered.layering.layer": "4"
+            },
+            "ports": [
+                {
+                    "id": "reach_school_in_north",
+                    "layoutOptions": {
+                        "elk.port.side": "NORTH"
+                    }
+                },
+                {
+                    "id": "reach_school_in_east",
+                    "layoutOptions": {
+                        "elk.port.side": "EAST"
+                    }
+                }
+            ]
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "source": "leave_home",
+            "sourcePort": "leave_home_out_south",
+            "target": "check_time",
+            "targetPort": "check_time_in_north"
+        },
+        {
+            "id": "e2",
+            "source": "check_time",
+            "sourcePort": "check_time_out_south",
+            "target": "before_7am",
+            "targetPort": "before_7am_in_north"
+        },
+        {
+            "id": "e3",
+            "source": "before_7am",
+            "sourcePort": "before_7am_out_west",
+            "target": "take_bus",
+            "targetPort": "take_bus_in_north",
+            "labels": [
+                {
+                    "text": "NO"
+                }
+            ]
+        },
+        {
+            "id": "e4",
+            "source": "before_7am",
+            "sourcePort": "before_7am_out_east",
+            "target": "take_subway",
+            "targetPort": "take_subway_in_north",
+            "labels": [
+                {
+                    "text": "YES"
+                }
+            ]
+        },
+        {
+            "id": "e5",
+            "source": "take_bus",
+            "sourcePort": "take_bus_out_south",
+            "target": "reach_school",
+            "targetPort": "reach_school_in_north"
+        },
+        {
+            "id": "e6",
+            "source": "take_subway",
+            "sourcePort": "take_subway_out_south",
+            "target": "reach_school",
+            "targetPort": "reach_school_in_east"
+        }
+    ]
+}
