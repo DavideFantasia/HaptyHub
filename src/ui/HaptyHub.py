@@ -104,9 +104,9 @@ class HaptyHub(QMainWindow):
 
     # --- Metodi per aprire le finestre ---
     def open_android_model(self):
-        print("Apertura finestra Android...")
-        # self.android_win = AndroidModelWindow(...)
-        # self.android_win.show()
+        from src.ui.android_model_window import AndroidModelWindow
+        self.android_win = AndroidModelWindow()
+        self.android_win.show()
 
     def open_circuit_model(self):
         from src.ui.basic_haptic_modeler import LandingWindow # La rinomineremo poi

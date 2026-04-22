@@ -27,7 +27,7 @@ echo "[4/5] Creazione dell'icona nel menu applicazioni..."
 APP_DIR=$(pwd)
 DESKTOP_FILE="$HOME/.local/share/applications/HaptyGraph.desktop"
 # percorso dell'icona basato sulla cartella attuale
-ICON_PATH="$APP_DIR/src/utils/icon.svg"
+ICON_PATH="$APP_DIR/assets/icon.svg"
 
 cat <<EOF > "$DESKTOP_FILE"
 [Desktop Entry]
