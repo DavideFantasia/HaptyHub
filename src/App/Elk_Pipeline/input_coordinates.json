@@ -1,0 +1,247 @@
+{
+  "id": "root",
+  "layoutOptions": {
+    "elk.algorithm": "layered",
+    "elk.direction": "DOWN",
+    "elk.edgeRouting": "ORTHOGONAL",
+    "elk.spacing.nodeNode": "80",
+    "elk.spacing.edgeNode": "80",
+    "elk.spacing.edgeEdge": "20",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "100",
+    "elk.layered.spacing.edgeNodeBetweenLayers": "40",
+    "elk.layered.layering.strategy": "INTERACTIVE",
+    "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
+    "elk.portConstraints": "FIXED_SIDE",
+    "elk.edgeLabels.placement": "UNDEFINED"
+  },
+  "children": [
+    {
+      "id": "A",
+      "myCustomShape": "circle",
+      "width": 40,
+      "height": 40,
+      "labels": [
+        {
+          "text": "START"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "0"
+      },
+      "ports": [
+        {
+          "id": "A_out_south",
+          "layoutOptions": {
+            "elk.port.side": "SOUTH"
+          }
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "myCustomShape": "diamond",
+      "width": 60,
+      "height": 60,
+      "labels": [
+        {
+          "text": "x > y?"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "1"
+      },
+      "ports": [
+        {
+          "id": "B_in_north",
+          "layoutOptions": {
+            "elk.port.side": "NORTH"
+          }
+        },
+        {
+          "id": "B_out_east",
+          "layoutOptions": {
+            "elk.port.side": "EAST"
+          }
+        },
+        {
+          "id": "B_out_west",
+          "layoutOptions": {
+            "elk.port.side": "WEST"
+          }
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "myCustomShape": "trapezoid",
+      "width": 50,
+      "height": 50,
+      "labels": [
+        {
+          "text": "INPUT"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "2"
+      },
+      "ports": [
+        {
+          "id": "D_in_north",
+          "layoutOptions": {
+            "elk.port.side": "NORTH"
+          }
+        },
+        {
+          "id": "D_out_south",
+          "layoutOptions": {
+            "elk.port.side": "SOUTH"
+          }
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "myCustomShape": "square",
+      "width": 40,
+      "height": 40,
+      "labels": [
+        {
+          "text": "x++"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "2"
+      },
+      "ports": [
+        {
+          "id": "C_in_north",
+          "layoutOptions": {
+            "elk.port.side": "NORTH"
+          }
+        },
+        {
+          "id": "C_out_south",
+          "layoutOptions": {
+            "elk.port.side": "SOUTH"
+          }
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "myCustomShape": "trapezoid",
+      "width": 50,
+      "height": 50,
+      "labels": [
+        {
+          "text": "INPUT"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "3"
+      },
+      "ports": [
+        {
+          "id": "E_in_north",
+          "layoutOptions": {
+            "elk.port.side": "NORTH"
+          }
+        },
+        {
+          "id": "E_out_south",
+          "layoutOptions": {
+            "elk.port.side": "SOUTH"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "myCustomShape": "circle",
+      "width": 40,
+      "height": 40,
+      "labels": [
+        {
+          "text": "FINISH"
+        }
+      ],
+      "layoutOptions": {
+        "elk.portConstraints": "FIXED_SIDE",
+        "elk.layered.layering.layer": "4"
+      },
+      "ports": [
+        {
+          "id": "F_in_north",
+          "layoutOptions": {
+            "elk.port.side": "NORTH"
+          }
+        },
+        {
+          "id": "F_in_east",
+          "layoutOptions": {
+            "elk.port.side": "EAST"
+          }
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "A",
+      "sourcePort": "A_out_south",
+      "target": "B",
+      "targetPort": "B_in_north"
+    },
+    {
+      "id": "e2",
+      "source": "B",
+      "sourcePort": "B_out_east",
+      "target": "D",
+      "targetPort": "D_in_north",
+      "labels": [
+        {
+          "text": "Yes"
+        }
+      ]
+    },
+    {
+      "id": "e3",
+      "source": "B",
+      "sourcePort": "B_out_west",
+      "target": "C",
+      "targetPort": "C_in_north",
+      "labels": [
+        {
+          "text": "No"
+        }
+      ]
+    },
+    {
+      "id": "e4",
+      "source": "D",
+      "sourcePort": "D_out_south",
+      "target": "F",
+      "targetPort": "F_in_east"
+    },
+    {
+      "id": "e5",
+      "source": "C",
+      "sourcePort": "C_out_south",
+      "target": "E",
+      "targetPort": "E_in_north"
+    },
+    {
+      "id": "e6",
+      "source": "E",
+      "sourcePort": "E_out_south",
+      "target": "F",
+      "targetPort": "F_in_north"
+    }
+  ]
+}

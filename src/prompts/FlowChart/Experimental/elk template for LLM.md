@@ -5,19 +5,29 @@ Your task is to translate this visual flowchart into a strict ELK (Eclipse Layou
 # Global Layout Rules:
 Start the JSON with the following exact root configuration to enforce 90-degree Manhattan routing and fixed ports:
 
-        {
+       {
         "id": "root",
         "layoutOptions": {
             "elk.algorithm": "layered",
             "elk.direction": "DOWN",
             "elk.edgeRouting": "ORTHOGONAL",
+            
             "elk.spacing.nodeNode": "80",
-            "elk.layered.spacing.nodeNodeBetweenLayers": "80",
             "elk.spacing.edgeNode": "80",
-            "elk.layered.spacing.edgeNodeBetweenLayers": "80",
+            "elk.spacing.edgeEdge": "20",
+            
+            "elk.layered.spacing.nodeNodeBetweenLayers": "100",
+            "elk.layered.spacing.edgeNodeBetweenLayers": "40",
+            
             "elk.layered.layering.strategy": "INTERACTIVE",
             "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
-            "elk.portConstraints": "FIXED_SIDE"
+            "elk.portConstraints": "FIXED_SIDE",
+            
+            "elk.layered.compaction.postCompaction.strategy": "EDGE_LENGTH",
+            
+            "elk.layered.spacing.dummyNodeNodeBetweenLayers": "10",
+            
+            "elk.edgeLabels.placement": "UNDEFINED"
         },
         "children": [],
         "edges": []
@@ -28,6 +38,8 @@ Start the JSON with the following exact root configuration to enforce 90-degree 
 # Node Definition Rules (The children array):
 For every shape in the flowchart, create a node object. You MUST include a custom "myCustomShape" attribute and assign sizes and ports exactly as follows:
 
+Crucial Rule: ANY node that receives multiple incoming edges (not just the Finish node) MUST use different cardinal directions for each edge. For example, if two edges arrive at an Input node, one MUST enter NORTH and the other MUST enter EAST or WEST
+
 1. Start/Finish Nodes (Circles/Ovals):
 
         "myCustomShape": "circle"
@@ -36,7 +48,7 @@ For every shape in the flowchart, create a node object. You MUST include a custo
         
                 Crucial Rule: Nodes with side ports MUST include "layoutOptions": { "elk.portConstraints": "FIXED_SIDE" } inside the node definition.
 
-        Ports: Start nodes need a SOUTH port. Finish nodes need a NORTH port. (if two or more ports arrive at the finish node merge them in the north port)
+        Ports: Start nodes need a SOUTH port. Finish nodes need a NORTH port. (if two or more ports arrive at the finish node DO NOT merge them in the north port)
 
 2. Process/Action Nodes (Rectangles):
 
@@ -104,6 +116,8 @@ Trace every line in the flowchart.
     You MUST explicitly map the "sourcePort" and "targetPort".
 
     Vertical center flow should go SOUTH to NORTH.
+
+    All primary incoming edges MUST target a NORTH port. Side ports (EAST/WEST) should ONLY be used for the FINISH node if multiple edges arrive there.
 
     Bypass loops (like "No" branches) MUST exit an EAST or WEST port and enter a NORTH port to prevent overlapping the central spine.
 
