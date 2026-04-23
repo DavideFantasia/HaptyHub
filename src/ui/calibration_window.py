@@ -162,16 +162,15 @@ class CalibrationWindow(QMainWindow):
                     
     def _handle_state_baseline(self, mags):
         """Raccoglie i primi frame per stabilire lo 'zero' del sensore."""
-        
         self.baseline_frames.append(mags)
         if len(self.baseline_frames) >= 5: # Dopo ~1 secondo
             # Calcola la media lungo l'asse 0 (media di ogni singolo punto della scansione)
             self.baseline_data = np.mean(self.baseline_frames, axis=0)
-            
+            self.__update_threshold() # Aggiorna la soglia in base al rumore di fondo
+
             # Imposta la linea rossa della soglia sul grafico per aiuto visivo
             self.thresh_line.setPos(self.threshold)
             self.thresh_line.setVisible(True)
-            self.plot_widget.setYRange(0, self.threshold * 5) # Adatta lo zoom
             
             self._cambia_stato(self.STATE_WAIT_TOUCH)
 
@@ -216,20 +215,46 @@ class CalibrationWindow(QMainWindow):
             return
 
         # Crea l'oggetto Node e lo salva in memoria
+        diff = np.abs(np.array(self.final_fingerprint) - self.baseline_data)
+        
+        # Troviamo l'indice del valore massimo (il picco)
+        peak_index = int(np.argmax(diff))
+        peak_magnitude = float(diff[peak_index])
+
+        # Invece di salvare tutto l'array, salviamo solo un piccolo dizionario o array
+        window_data = {
+            "index": peak_index,
+            "magnitude": peak_magnitude
+        }
 
         nuovo_nodo = Node(
             id=node_id, 
             description=desc, 
-            fingerprint=self.final_fingerprint
+            fingerprint=window_data  # Salviamo l'oggetto "window" invece dell'array!
         )
         self.haptic_graph.add_node(nuovo_nodo)
-        
         print(f"Salvato: {nuovo_nodo.id} - Fingerprint di {len(nuovo_nodo.fingerprint)} punti acquisito.")
 
         # Pulisci il form e riavvia il ciclo!
         self.entry_node_id.clear()
         self.entry_desc.clear()
         self._cambia_stato(self.STATE_WAIT_TOUCH)
+
+    def __update_threshold(self):
+        """Aggiorna la soglia di rilevamento tocco."""
+        max_rumore_fondo = 0.0
+        
+        for frame in self.baseline_frames:
+            # Calcoliamo la differenza assoluta di questo frame dalla media
+            diff = np.abs(np.array(frame) - self.baseline_data)
+            picco_rumore = np.max(diff)
+            
+            if picco_rumore > max_rumore_fondo:
+                max_rumore_fondo = picco_rumore
+        
+        moltiplicatore_sicurezza = 15.5 # Più è alto, più devi premere forte il dito
+        
+        self.threshold = max(max_rumore_fondo * moltiplicatore_sicurezza, 0.05)
 
     def closeEvent(self, event):
         """Chiude il thread in modo sicuro."""

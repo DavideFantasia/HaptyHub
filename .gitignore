@@ -4,6 +4,7 @@ input/
 doc/
 node_modules/
 temp/
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

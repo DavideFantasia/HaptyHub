@@ -140,25 +140,39 @@ class HapticReaderWindow(QMainWindow):
             if len(self.baseline_frames) >= 5:
                 self.baseline_data = np.mean(self.baseline_frames, axis=0)
                 self.is_baseline_ready = True
+                self.__update_threshold() # Aggiorna la soglia in base al rumore di fondo
                 self.lbl_stato.setText("PRONTO.\nTocca un nodo.")
                 self.lbl_stato.setStyleSheet("font-size: 20px; font-weight: bold; color: green;")
+            
             return
 
         # --- 2. Rilevamento Tocco ---
         diff = np.abs(mags - self.baseline_data)
         
-        # Calcolo EMS
-        if np.max(diff) > self.threshold:
+        # 2.1. Troviamo dove si trova il picco più alto in QUESTO istante
+        live_peak_index = int(np.argmax(diff))
+        live_peak_mag = diff[live_peak_index]
+
+        # 2.2. Controlliamo se supera la soglia minima di tocco
+        if live_peak_mag > self.threshold:
+            
             best_node = None
-            min_mse = float('inf')
+            min_distance = float('inf')
+            
+            # Finestra di tolleranza (es. +/- 3 punti nell'array da 101)
+            # Se la NanoVNA scansiona 900MHz su 101 punti, 1 punto sono circa 9MHz.
+            TOLERANCE = 0 
 
             for nodo in self.graph.nodes:
-                fp = np.array(nodo.fingerprint)
-                # Formula MSE: Media dei quadrati delle differenze tra le due curve
-                mse = np.mean((mags - fp)**2)
+                saved_index = nodo.fingerprint["index"]
                 
-                if mse < min_mse:
-                    min_mse = mse
+                # Calcoliamo la distanza "orizzontale" (sull'asse X delle frequenze)
+                distanza = abs(live_peak_index - saved_index)
+                
+                # Se il picco rientra nella finestra di questo nodo
+                # e ed è il più vicino in assoluto
+                if distanza <= TOLERANCE and distanza < min_distance:
+                    min_distance = distanza
                     best_node = nodo
 
             # Aggiorna l'interfaccia con il vincitore
@@ -182,6 +196,22 @@ class HapticReaderWindow(QMainWindow):
             # Resettiamo la memoria quando alziamo il dito.
             # Così, se ritocchiamo lo STESSO nodo, lo rileggerà.
             self.ultimo_nodo_letto = None
+
+    def __update_threshold(self):
+        """Aggiorna la soglia di rilevamento tocco."""
+        max_rumore_fondo = 0.0
+        
+        for frame in self.baseline_frames:
+            # Calcoliamo la differenza assoluta di questo frame dalla media
+            diff = np.abs(np.array(frame) - self.baseline_data)
+            picco_rumore = np.max(diff)
+            
+            if picco_rumore > max_rumore_fondo:
+                max_rumore_fondo = picco_rumore
+        
+        moltiplicatore_sicurezza = 15.5 # Più è alto, più devi premere forte il dito
+        
+        self.threshold = max(max_rumore_fondo * moltiplicatore_sicurezza, 0.05)
 
     def closeEvent(self, event):
         """Gestione pulita della chiusura della finestra e del thread."""
