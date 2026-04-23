@@ -58,7 +58,8 @@ class HapticReaderWindow(QMainWindow):
 
         # --- SINISTRA: Grafico Real-Time ---
         self.plot_widget = pg.PlotWidget(title="Dati Sensore LIVE")
-        self.plot_widget.setYRange(0, 1)
+        self.plot_widget.setYRange(0, 80)
+        self.plot_widget.setXRange(0, 100)
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
         self.plot_curve = self.plot_widget.plot(pen=pg.mkPen('c', width=2)) # Ciano per la lettura
         self.layout.addWidget(self.plot_widget, stretch=2)
@@ -121,8 +122,8 @@ class HapticReaderWindow(QMainWindow):
         """Ciclo di aggiornamento dati e logica di Machine Learning."""
         """Metodo richiamato automaticamente ogni volta che il Worker emette 'data_ready'."""
         # Non serve più fare 'dati_raw = self.sensor.read_data()' perché ci arrivano come parametro
-        
-        mags = np.array([math.sqrt(re**2 + im**2) for re, im in dati_raw])
+        k = 50
+        mags = np.array([k*((1-re**2-im**2)/(1-re)**2+im**2) for re, im in dati_raw])
         
         # Controllo di sicurezza
         if len(mags) != 101: 
@@ -136,7 +137,7 @@ class HapticReaderWindow(QMainWindow):
         # --- 1. Calcolo Baseline ---
         if not self.is_baseline_ready:
             self.baseline_frames.append(mags)
-            if len(self.baseline_frames) >= 10:
+            if len(self.baseline_frames) >= 5:
                 self.baseline_data = np.mean(self.baseline_frames, axis=0)
                 self.is_baseline_ready = True
                 self.lbl_stato.setText("PRONTO.\nTocca un nodo.")

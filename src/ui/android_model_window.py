@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from src.ui.panels import ELK_FlowChartPanel, ELK_GraphFormPanel
+from src.ui.panels import ELK_FlowChartPanel, ELK_GraphPanel
 
 # Importa la configurazione e gli helper
 import config, json, subprocess, time
@@ -82,7 +82,7 @@ class AndroidModelWindow(QMainWindow):
         act_flow.setCheckable(True)
         act_flow.triggered.connect(lambda: self.switch_template(0))
         template_group.addAction(act_flow)
-        '''
+
         act_dir = QAction("Direct Graph", self)
         act_dir.setCheckable(True)
         act_dir.triggered.connect(lambda: self.switch_template(1))
@@ -93,7 +93,7 @@ class AndroidModelWindow(QMainWindow):
         act_undir.setCheckable(True)
         act_undir.triggered.connect(lambda: self.switch_template(2))
         template_group.addAction(act_undir)
-        
+        '''
         act_set = QAction("Set Theory", self)
         act_set.setCheckable(True)
         act_set.triggered.connect(lambda: self.switch_template(3))
@@ -101,7 +101,7 @@ class AndroidModelWindow(QMainWindow):
 
         template_menu.addActions([act_flow, act_dir, act_undir, act_set])
         '''
-        template_menu.addActions([act_flow])
+        template_menu.addActions([act_flow, act_dir, act_undir])
         # ======== Menu 'Tattile' ========
         tactile_menu = menu_bar.addMenu("&Tattile")
         act_calibrate = QAction("Calibrazione Sensore", self)
@@ -166,8 +166,8 @@ class AndroidModelWindow(QMainWindow):
         # NOTA: Per Android, questi pannelli dovrebbero restituire i nuovi "ElkTemplates" 
         # (quelli che hanno get_phase_2 = None) per avviare la pipeline corretta.
         self.panel_flow = ELK_FlowChartPanel()                   # Indice 0
-        self.panel_dir = ELK_GraphFormPanel(is_directed=True)       # Indice 1
-        self.panel_undir = ELK_GraphFormPanel(is_directed=False)    # Indice 2
+        self.panel_dir = ELK_GraphPanel()                        # Indice 1
+        self.panel_undir = ELK_GraphPanel()                      # Indice 2
         #self.panel_set = SetTheoryPanel()                       # Indice 3
         
         self.stacked_widget.addWidget(self.panel_flow)

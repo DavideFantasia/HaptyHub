@@ -19,13 +19,13 @@
     },
     "children": [
       {
-        "id": "leave_home",
+        "id": "node4",
         "myCustomShape": "circle",
         "width": 40,
         "height": 40,
         "labels": [
           {
-            "text": "Leave home",
+            "text": "4",
             "x": 0,
             "y": 0,
             "width": 0,
@@ -33,219 +33,43 @@
           }
         ],
         "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "0"
+          "elk.layered.layering.layer": "0",
+          "elk.portConstraints": "FIXED_SIDE"
         },
         "ports": [
           {
-            "id": "leave_home_out_south",
+            "id": "node4_out_south",
             "layoutOptions": {
               "elk.port.side": "SOUTH"
             },
             "x": 20,
             "y": 40,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node4_out_west",
+            "layoutOptions": {
+              "elk.port.side": "WEST"
+            },
+            "x": 0,
+            "y": 20,
             "width": 0,
             "height": 0
           }
         ],
         "$H": 277,
-        "x": 122,
+        "x": 92.02,
         "y": 12
       },
       {
-        "id": "check_time",
-        "myCustomShape": "trapezoid",
-        "width": 50,
-        "height": 50,
-        "labels": [
-          {
-            "text": "Check time",
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "1"
-        },
-        "ports": [
-          {
-            "id": "check_time_in_north",
-            "layoutOptions": {
-              "elk.port.side": "NORTH"
-            },
-            "x": 25,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "id": "check_time_out_south",
-            "layoutOptions": {
-              "elk.port.side": "SOUTH"
-            },
-            "x": 25,
-            "y": 50,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "$H": 283,
-        "x": 117,
-        "y": 152
-      },
-      {
-        "id": "before_7am",
-        "myCustomShape": "diamond",
-        "width": 60,
-        "height": 60,
-        "labels": [
-          {
-            "text": "Before 7 am?",
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "2"
-        },
-        "ports": [
-          {
-            "id": "before_7am_in_north",
-            "layoutOptions": {
-              "elk.port.side": "NORTH"
-            },
-            "x": 30,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "id": "before_7am_out_west",
-            "layoutOptions": {
-              "elk.port.side": "WEST"
-            },
-            "x": 0,
-            "y": 30,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "id": "before_7am_out_east",
-            "layoutOptions": {
-              "elk.port.side": "EAST"
-            },
-            "x": 60,
-            "y": 30,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "$H": 288,
-        "x": 112,
-        "y": 302
-      },
-      {
-        "id": "take_bus",
-        "myCustomShape": "square",
-        "width": 40,
-        "height": 40,
-        "labels": [
-          {
-            "text": "Take bus",
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "3"
-        },
-        "ports": [
-          {
-            "id": "take_bus_in_north",
-            "layoutOptions": {
-              "elk.port.side": "NORTH"
-            },
-            "x": 20,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "id": "take_bus_out_south",
-            "layoutOptions": {
-              "elk.port.side": "SOUTH"
-            },
-            "x": 20,
-            "y": 40,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "$H": 294,
-        "x": 12,
-        "y": 472
-      },
-      {
-        "id": "take_subway",
-        "myCustomShape": "square",
-        "width": 40,
-        "height": 40,
-        "labels": [
-          {
-            "text": "Take subway",
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "3"
-        },
-        "ports": [
-          {
-            "id": "take_subway_in_north",
-            "layoutOptions": {
-              "elk.port.side": "NORTH"
-            },
-            "x": 20,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "id": "take_subway_out_south",
-            "layoutOptions": {
-              "elk.port.side": "SOUTH"
-            },
-            "x": 20,
-            "y": 40,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "$H": 299,
-        "x": 232,
-        "y": 472
-      },
-      {
-        "id": "reach_school",
+        "id": "node1",
         "myCustomShape": "circle",
         "width": 40,
         "height": 40,
         "labels": [
           {
-            "text": "Reach school",
+            "text": "1",
             "x": 0,
             "y": 0,
             "width": 0,
@@ -253,12 +77,12 @@
           }
         ],
         "layoutOptions": {
-          "elk.portConstraints": "FIXED_SIDE",
-          "elk.layered.layering.layer": "4"
+          "elk.layered.layering.layer": "1",
+          "elk.portConstraints": "FIXED_SIDE"
         },
         "ports": [
           {
-            "id": "reach_school_in_north",
+            "id": "node1_in_north",
             "layoutOptions": {
               "elk.port.side": "NORTH"
             },
@@ -268,7 +92,159 @@
             "height": 0
           },
           {
-            "id": "reach_school_in_east",
+            "id": "node1_in_west",
+            "layoutOptions": {
+              "elk.port.side": "WEST"
+            },
+            "x": 0,
+            "y": 20,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node1_out_south",
+            "layoutOptions": {
+              "elk.port.side": "SOUTH"
+            },
+            "x": 20,
+            "y": 40,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "$H": 284,
+        "x": 92.02,
+        "y": 152
+      },
+      {
+        "id": "node3",
+        "myCustomShape": "circle",
+        "width": 40,
+        "height": 40,
+        "labels": [
+          {
+            "text": "3",
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "layoutOptions": {
+          "elk.layered.layering.layer": "2",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        "ports": [
+          {
+            "id": "node3_in_north",
+            "layoutOptions": {
+              "elk.port.side": "NORTH"
+            },
+            "x": 20,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node3_out_east",
+            "layoutOptions": {
+              "elk.port.side": "EAST"
+            },
+            "x": 40,
+            "y": 20,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node3_out_south",
+            "layoutOptions": {
+              "elk.port.side": "SOUTH"
+            },
+            "x": 20,
+            "y": 40,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "$H": 290,
+        "x": 92.02,
+        "y": 292
+      },
+      {
+        "id": "node2",
+        "myCustomShape": "circle",
+        "width": 40,
+        "height": 40,
+        "labels": [
+          {
+            "text": "2",
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "layoutOptions": {
+          "elk.layered.layering.layer": "3",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        "ports": [
+          {
+            "id": "node2_in_north",
+            "layoutOptions": {
+              "elk.port.side": "NORTH"
+            },
+            "x": 20,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node2_out_south",
+            "layoutOptions": {
+              "elk.port.side": "SOUTH"
+            },
+            "x": 20,
+            "y": 40,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "$H": 296,
+        "x": 92.02,
+        "y": 432
+      },
+      {
+        "id": "node0",
+        "myCustomShape": "circle",
+        "width": 40,
+        "height": 40,
+        "labels": [
+          {
+            "text": "0",
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        "layoutOptions": {
+          "elk.layered.layering.layer": "4",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        "ports": [
+          {
+            "id": "node0_in_north",
+            "layoutOptions": {
+              "elk.port.side": "NORTH"
+            },
+            "x": 20,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "id": "node0_in_east",
             "layoutOptions": {
               "elk.port.side": "EAST"
             },
@@ -278,182 +254,182 @@
             "height": 0
           }
         ],
-        "$H": 304,
-        "x": 12,
-        "y": 612
+        "$H": 301,
+        "x": 92.02,
+        "y": 572
       }
     ],
     "edges": [
       {
-        "id": "e1",
-        "source": "leave_home",
-        "sourcePort": "leave_home_out_south",
-        "target": "check_time",
-        "targetPort": "check_time_in_north",
+        "id": "edge1",
+        "source": "node4",
+        "sourcePort": "node4_out_south",
+        "target": "node1",
+        "targetPort": "node1_in_north",
         "sections": [
           {
-            "id": "e1_s0",
+            "id": "edge1_s0",
             "startPoint": {
-              "x": 142,
+              "x": 112.02,
               "y": 52
             },
             "endPoint": {
-              "x": 142,
+              "x": 112.02,
               "y": 152
             },
-            "incomingShape": "leave_home_out_south",
-            "outgoingShape": "check_time_in_north"
+            "incomingShape": "node4_out_south",
+            "outgoingShape": "node1_in_north"
           }
         ],
         "container": "root"
       },
       {
-        "id": "e2",
-        "source": "check_time",
-        "sourcePort": "check_time_out_south",
-        "target": "before_7am",
-        "targetPort": "before_7am_in_north",
+        "id": "edge2",
+        "source": "node4",
+        "sourcePort": "node4_out_west",
+        "target": "node0",
+        "targetPort": "node0_in_east",
         "sections": [
           {
-            "id": "e2_s0",
+            "id": "edge2_s0",
             "startPoint": {
-              "x": 142,
-              "y": 202
+              "x": 92.02,
+              "y": 32
             },
             "endPoint": {
-              "x": 142,
-              "y": 302
+              "x": 132.01999999999998,
+              "y": 592
             },
-            "incomingShape": "check_time_out_south",
-            "outgoingShape": "before_7am_in_north"
+            "bendPoints": [
+              {
+                "x": 12.02,
+                "y": 32
+              },
+              {
+                "x": 12.02,
+                "y": 92
+              },
+              {
+                "x": 232.02,
+                "y": 92
+              },
+              {
+                "x": 232.02,
+                "y": 592
+              }
+            ],
+            "incomingShape": "node4_out_west",
+            "outgoingShape": "node0_in_east"
           }
         ],
         "container": "root"
       },
       {
-        "id": "e3",
-        "source": "before_7am",
-        "sourcePort": "before_7am_out_west",
-        "target": "take_bus",
-        "targetPort": "take_bus_in_north",
-        "labels": [
-          {
-            "text": "NO",
-            "x": 30,
-            "y": 372,
-            "width": 0,
-            "height": 0
-          }
-        ],
+        "id": "edge3",
+        "source": "node1",
+        "sourcePort": "node1_out_south",
+        "target": "node3",
+        "targetPort": "node3_in_north",
         "sections": [
           {
-            "id": "e3_s0",
+            "id": "edge3_s0",
             "startPoint": {
-              "x": 112,
+              "x": 112.02,
+              "y": 192
+            },
+            "endPoint": {
+              "x": 112.02,
+              "y": 292
+            },
+            "incomingShape": "node1_out_south",
+            "outgoingShape": "node3_in_north"
+          }
+        ],
+        "container": "root"
+      },
+      {
+        "id": "edge4",
+        "source": "node3",
+        "sourcePort": "node3_out_east",
+        "target": "node1",
+        "targetPort": "node1_in_west",
+        "sections": [
+          {
+            "id": "edge4_s0",
+            "startPoint": {
+              "x": 132.01999999999998,
+              "y": 312
+            },
+            "endPoint": {
+              "x": 92.02,
+              "y": 172
+            },
+            "bendPoints": [
+              {
+                "x": 212.02,
+                "y": 312
+              },
+              {
+                "x": 212.02,
+                "y": 232
+              },
+              {
+                "x": 12.02,
+                "y": 232
+              },
+              {
+                "x": 12.02,
+                "y": 172
+              }
+            ],
+            "incomingShape": "node3_out_east",
+            "outgoingShape": "node1_in_west"
+          }
+        ],
+        "container": "root"
+      },
+      {
+        "id": "edge5",
+        "source": "node3",
+        "sourcePort": "node3_out_south",
+        "target": "node2",
+        "targetPort": "node2_in_north",
+        "sections": [
+          {
+            "id": "edge5_s0",
+            "startPoint": {
+              "x": 112.02,
               "y": 332
             },
             "endPoint": {
-              "x": 32,
+              "x": 112.02,
+              "y": 432
+            },
+            "incomingShape": "node3_out_south",
+            "outgoingShape": "node2_in_north"
+          }
+        ],
+        "container": "root"
+      },
+      {
+        "id": "edge6",
+        "source": "node2",
+        "sourcePort": "node2_out_south",
+        "target": "node0",
+        "targetPort": "node0_in_north",
+        "sections": [
+          {
+            "id": "edge6_s0",
+            "startPoint": {
+              "x": 112.02,
               "y": 472
             },
-            "bendPoints": [
-              {
-                "x": 32,
-                "y": 332
-              }
-            ],
-            "incomingShape": "before_7am_out_west",
-            "outgoingShape": "take_bus_in_north"
-          }
-        ],
-        "container": "root"
-      },
-      {
-        "id": "e4",
-        "source": "before_7am",
-        "sourcePort": "before_7am_out_east",
-        "target": "take_subway",
-        "targetPort": "take_subway_in_north",
-        "labels": [
-          {
-            "text": "YES",
-            "x": 255,
-            "y": 372,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        "sections": [
-          {
-            "id": "e4_s0",
-            "startPoint": {
-              "x": 172,
-              "y": 332
-            },
             "endPoint": {
-              "x": 252,
-              "y": 472
+              "x": 112.02,
+              "y": 572
             },
-            "bendPoints": [
-              {
-                "x": 252,
-                "y": 332
-              }
-            ],
-            "incomingShape": "before_7am_out_east",
-            "outgoingShape": "take_subway_in_north"
-          }
-        ],
-        "container": "root"
-      },
-      {
-        "id": "e5",
-        "source": "take_bus",
-        "sourcePort": "take_bus_out_south",
-        "target": "reach_school",
-        "targetPort": "reach_school_in_north",
-        "sections": [
-          {
-            "id": "e5_s0",
-            "startPoint": {
-              "x": 32,
-              "y": 512
-            },
-            "endPoint": {
-              "x": 32,
-              "y": 612
-            },
-            "incomingShape": "take_bus_out_south",
-            "outgoingShape": "reach_school_in_north"
-          }
-        ],
-        "container": "root"
-      },
-      {
-        "id": "e6",
-        "source": "take_subway",
-        "sourcePort": "take_subway_out_south",
-        "target": "reach_school",
-        "targetPort": "reach_school_in_east",
-        "sections": [
-          {
-            "id": "e6_s0",
-            "startPoint": {
-              "x": 252,
-              "y": 512
-            },
-            "endPoint": {
-              "x": 52,
-              "y": 632
-            },
-            "bendPoints": [
-              {
-                "x": 252,
-                "y": 632
-              }
-            ],
-            "incomingShape": "take_subway_out_south",
-            "outgoingShape": "reach_school_in_east"
+            "incomingShape": "node2_out_south",
+            "outgoingShape": "node0_in_north"
           }
         ],
         "container": "root"
@@ -462,8 +438,8 @@
     "$H": 13,
     "x": 0,
     "y": 0,
-    "width": 284,
-    "height": 664,
+    "width": 244.05999999999997,
+    "height": 624,
     "screen_width": 135,
     "screen_height": 217
   }

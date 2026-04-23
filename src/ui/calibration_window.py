@@ -127,7 +127,8 @@ class CalibrationWindow(QMainWindow):
         if self.current_state == self.STATE_FORM_ENTRY:
             return
 
-        mags = np.array([math.sqrt(re**2 + im**2) for re, im in dati_raw])
+        k = 50
+        mags = np.array([k*((1-re**2-im**2)/(1-re)**2+im**2) for re, im in dati_raw])
         
         # Controllo di sicurezza
         if len(mags) != 101: 
@@ -163,7 +164,7 @@ class CalibrationWindow(QMainWindow):
         """Raccoglie i primi frame per stabilire lo 'zero' del sensore."""
         
         self.baseline_frames.append(mags)
-        if len(self.baseline_frames) >= 10: # Dopo ~2 secondi (10 frame x 200ms)
+        if len(self.baseline_frames) >= 5: # Dopo ~1 secondo
             # Calcola la media lungo l'asse 0 (media di ogni singolo punto della scansione)
             self.baseline_data = np.mean(self.baseline_frames, axis=0)
             
