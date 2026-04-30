@@ -4,9 +4,8 @@ import numpy as np
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QMessageBox, QFileDialog)
 from PyQt6.QtGui import QAction
-from PyQt6.QtCore import QTimer, Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt
 import pyqtgraph as pg
-import time
 
 from src.utils.sensor_reader import NVAReader
 from src.models.graph_models import HapticGraph
@@ -20,33 +19,31 @@ class HapticReaderWindow(QMainWindow):
         self.resize(1000, 600)
         
         self.sensor = sensor
-        self.graph = None # Qui caricheremo il file JSON
+        self.graph = None 
         
-        # Variabili di stato per la lettura
+        # Variabili di stato
         self.baseline_frames = []
         self.baseline_data = None
-        self.threshold = 0.1 # Mantieni la stessa soglia usata in calibrazione
         self.is_baseline_ready = False
 
         # --- GESTIONE TEXT TO SPEECH ---
         self.tts_worker = TTSWorker()
         self.tts_worker.start()
-        self.ultimo_nodo_letto = None # per evitare stuttering
+        self.ultimo_nodo_letto = None 
+        
+        # --- DEBOUNCING ---
+        self.no_touch_frames = 0 # Contatore per evitare "rimbalzi" quando togli il dito
 
         self._setup_ui()
         self._init_menu_bar()
 
-        # Crea e avvia il Worker in background
         self.worker = SensorWorker(self.sensor)
-        # Collega il "campanello" del worker alla funzione di aggiornamento
         self.worker.data_ready.connect(self.process_sensor_data)
         self.worker.start()
 
     def _init_menu_bar(self):
-        """Crea la barra dei menu per l'importazione del file JSON."""
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("&File")
-        
         act_importa = QAction("Importa Grafo (JSON)", self)
         act_importa.triggered.connect(self.importa_json)
         file_menu.addAction(act_importa)
@@ -61,10 +58,14 @@ class HapticReaderWindow(QMainWindow):
         self.plot_widget.setYRange(0, 80)
         self.plot_widget.setXRange(0, 100)
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_curve = self.plot_widget.plot(pen=pg.mkPen('c', width=2)) # Ciano per la lettura
+        self.plot_curve = self.plot_widget.plot(pen=pg.mkPen('c', width=2))
+        
+        # Aggiungiamo anche la baseline al grafico (tratteggiata) per debug visivo
+        self.plot_baseline = self.plot_widget.plot(pen=pg.mkPen('y', style=Qt.PenStyle.DashLine))
+        
         self.layout.addWidget(self.plot_widget, stretch=2)
 
-        # --- DESTRA: Feedback Visivo/Testuale ---
+        # --- DESTRA: Feedback ---
         self.info_layout = QVBoxLayout()
         
         self.lbl_stato = QLabel("Importa un file JSON per iniziare.")
@@ -86,11 +87,6 @@ class HapticReaderWindow(QMainWindow):
         self.layout.addLayout(self.info_layout, stretch=1)
 
     def importa_json(self):
-        """Apre il File Dialog per caricare il grafo."""
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
-        from src.models.graph_models import HapticGraph
-
-        # 1. Metti in pausa il thread per non aggiornare la UI mentre navighi le cartelle
         if hasattr(self, 'worker'):
             self.worker.is_paused = True
 
@@ -100,11 +96,8 @@ class HapticReaderWindow(QMainWindow):
 
         if filepath:
             try:
-                # Carichiamo il grafo
                 self.graph = HapticGraph.from_json(filepath)
-                
                 if len(self.graph.nodes) > 0:
-                    # Ricalcoliamo la linea di base per le condizioni attuali
                     self.baseline_frames = []
                     self.is_baseline_ready = False
                     self.lbl_stato.setText(f"Grafo caricato ({len(self.graph.nodes)} nodi).\nAcquisizione linea di base...")
@@ -114,112 +107,111 @@ class HapticReaderWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, "Errore", f"Impossibile leggere il file:\n{e}")
         
-        # 2. Togli la pausa al thread! (Sia che abbia caricato, sia che abbia premuto Annulla)
         if hasattr(self, 'worker'):
             self.worker.is_paused = False
 
     def process_sensor_data(self, dati_raw):
-        """Ciclo di aggiornamento dati e logica di Machine Learning."""
-        """Metodo richiamato automaticamente ogni volta che il Worker emette 'data_ready'."""
-        # Non serve più fare 'dati_raw = self.sensor.read_data()' perché ci arrivano come parametro
         k = 50
         mags = np.array([k*((1-re**2-im**2)/(1-re)**2+im**2) for re, im in dati_raw])
         
-        # Controllo di sicurezza
         if len(mags) != 101: 
             return
             
+        # NORMALIZZAZIONE MATEMATICA
+        pavimento_attuale = np.min(mags)
+        mags_ancorati = mags - pavimento_attuale
+        mags = mags_ancorati
+
         self.plot_curve.setData(mags)
 
         if not self.graph or len(self.graph.nodes) == 0:
             return
 
-        # --- 1. Calcolo Baseline ---
+        # --- 1. Calcolo Baseline Statica ---
         if not self.is_baseline_ready:
             self.baseline_frames.append(mags)
-            if len(self.baseline_frames) >= 5:
+            if len(self.baseline_frames) >= 15: # Usiamo 15 frame (circa 1.5s) per maggiore stabilità
                 self.baseline_data = np.mean(self.baseline_frames, axis=0)
+                self.plot_baseline.setData(self.baseline_data) # Mostriamo la baseline
                 self.is_baseline_ready = True
-                self.__update_threshold() # Aggiorna la soglia in base al rumore di fondo
+                
+                # Niente più threshold calcolato. Usiamo la variazione relativa percentuale.
                 self.lbl_stato.setText("PRONTO.\nTocca un nodo.")
                 self.lbl_stato.setStyleSheet("font-size: 20px; font-weight: bold; color: green;")
-            
             return
 
-        # --- 2. Rilevamento Tocco ---
-        diff = np.abs(mags - self.baseline_data)
+        # =======================================================
+        # 2. PREDICTION: WINDOWING & RELATIVE DIFFERENCE
+        # =======================================================
         
-        # 2.1. Troviamo dove si trova il picco più alto in QUESTO istante
-        live_peak_index = int(np.argmax(diff))
-        live_peak_mag = diff[live_peak_index]
+        WINDOW_SIZE = 2 
+        MIN_RELATIVE_CHANGE = 0.05 # Aumentato al 2% per ignorare shift lievi
+        
+        best_node = None
+        max_rel_diff = 0.0
 
-        # 2.2. Controlliamo se supera la soglia minima di tocco
-        if live_peak_mag > self.threshold:
-            
-            best_node = None
-            min_distance = float('inf')
-            
-            # Finestra di tolleranza (es. +/- 3 punti nell'array da 101)
-            # Se la NanoVNA scansiona 900MHz su 101 punti, 1 punto sono circa 9MHz.
-            TOLERANCE = 0 
-
-            for nodo in self.graph.nodes:
-                saved_index = nodo.fingerprint["index"]
+        for nodo in self.graph.nodes:
+            # Controllo di sicurezza: verifichiamo che il json sia formattato correttamente
+            if "peak_index" not in nodo.fingerprint:
+                continue
                 
-                # Calcoliamo la distanza "orizzontale" (sull'asse X delle frequenze)
-                distanza = abs(live_peak_index - saved_index)
+            idx = nodo.fingerprint["peak_index"]
+            
+            start = max(0, idx - WINDOW_SIZE)
+            end = min(len(mags), idx + WINDOW_SIZE + 1)
+            
+            live_window = mags[start:end]
+            base_window = self.baseline_data[start:end]
+            
+            local_floor = np.min(base_window)
+            
+            # "Sgonfiamo" la finestra rimuovendo il piedistallo
+            # Usiamo np.maximum(..., 0.001) per evitare aree nulle o negative causate dal rumore
+            base_window_ancorata = np.maximum(base_window - local_floor, 0.001)
+            live_window_ancorata = np.maximum(live_window - local_floor, 0.001)
+            
+            # Area della sola "gobba" a riposo
+            base_area = np.sum(base_window_ancorata)
+            
+            if base_area > 0.01:
+                diff_area = np.sum(np.abs(live_window_ancorata - base_window_ancorata))
+                rel_diff = diff_area / base_area
+            else:
+                rel_diff = 0
                 
-                # Se il picco rientra nella finestra di questo nodo
-                # e ed è il più vicino in assoluto
-                if distanza <= TOLERANCE and distanza < min_distance:
-                    min_distance = distanza
-                    best_node = nodo
+            if rel_diff > max_rel_diff:
+                max_rel_diff = rel_diff
+                best_node = nodo
 
-            # Aggiorna l'interfaccia con il vincitore
-            if best_node:
-                self.lbl_nodo_rilevato.setText(best_node.id)
-                self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #2196F3;")
-                self.lbl_descrizione.setText(best_node.description)
+        # =======================================================
+        # 3. AGGIORNAMENTO UI & TTS
+        # =======================================================
+        
+        if max_rel_diff > MIN_RELATIVE_CHANGE and best_node is not None:
+            self.no_touch_frames = 0 # Resetta il contatore
+            
+            self.lbl_nodo_rilevato.setText(best_node.id)
+            self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #2196F3;")
+            self.lbl_descrizione.setText(f"{best_node.description}\n(Confidenza: {max_rel_diff*100:.0f}%)")
 
-                # --- LOGICA TEXT-TO-SPEECH ---
-                # Parla solo se il nodo è diverso da quello che stiamo già tenendo premuto
-                if best_node.id != self.ultimo_nodo_letto:
-                    self.ultimo_nodo_letto = best_node.id
-                    self.tts_worker.parla(best_node.description)
+            if best_node.id != self.ultimo_nodo_letto:
+                self.ultimo_nodo_letto = best_node.id
+                self.tts_worker.parla(best_node.description)
+                
         else:
-            # Sotto la soglia, il dito è stato rimosso
-            self.lbl_nodo_rilevato.setText("Nessun tocco")
-            self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #555;")
-            self.lbl_descrizione.setText("")
-
-            # --- LOGICA TEXT-TO-SPEECH ---
-            # Resettiamo la memoria quando alziamo il dito.
-            # Così, se ritocchiamo lo STESSO nodo, lo rileggerà.
-            self.ultimo_nodo_letto = None
-
-    def __update_threshold(self):
-        """Aggiorna la soglia di rilevamento tocco."""
-        max_rumore_fondo = 0.0
-        
-        for frame in self.baseline_frames:
-            # Calcoliamo la differenza assoluta di questo frame dalla media
-            diff = np.abs(np.array(frame) - self.baseline_data)
-            picco_rumore = np.max(diff)
+            # Attendiamo 3 frame senza tocco prima di dichiarare la fine (Debouncing)
+            self.no_touch_frames += 1
             
-            if picco_rumore > max_rumore_fondo:
-                max_rumore_fondo = picco_rumore
-        
-        moltiplicatore_sicurezza = 15.5 # Più è alto, più devi premere forte il dito
-        
-        self.threshold = max(max_rumore_fondo * moltiplicatore_sicurezza, 0.05)
+            if self.no_touch_frames >= 3:
+                self.lbl_nodo_rilevato.setText("Nessun tocco")
+                self.lbl_nodo_rilevato.setStyleSheet("font-size: 32px; font-weight: bold; color: #555;")
+                self.lbl_descrizione.setText("")
+                self.ultimo_nodo_letto = None
 
     def closeEvent(self, event):
-        """Gestione pulita della chiusura della finestra e del thread."""
-        # Ferma il thread in modo sicuro
         if hasattr(self, 'worker') and self.worker.isRunning():
             self.worker.stop()
             
-        # Ferma la voce
         if hasattr(self, 'tts_worker') and self.tts_worker.isRunning():
             self.tts_worker.stop()
 
