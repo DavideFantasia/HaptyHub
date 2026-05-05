@@ -145,7 +145,7 @@ class HapticReaderWindow(QMainWindow):
         # =======================================================
         
         WINDOW_SIZE = 2 
-        MIN_RELATIVE_CHANGE = 0.05 # Aumentato al 2% per ignorare shift lievi
+        MIN_RELATIVE_CHANGE = 0.20 # Aumentato al 20% per ignorare shift lievi
         
         best_node = None
         max_rel_diff = 0.0
