@@ -33,13 +33,20 @@ GEMINI_MODEL_ID = "gemini-3-flash-preview"
 #====================
 #---- Path Utili ----
 #====================
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Cartella dove salveremo i file .scad generati
+
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 PROMPT_DIR = os.path.join(BASE_DIR, "src", "prompts")
 # Cartella degli asset (icone, immagini, ecc.)
 ASSET_DIR = os.path.join(BASE_DIR, "assets")
+
+DEVICES_FILE = os.path.join(BASE_DIR, "devices.json")
+ACTIVE_DEVICE = None # Memorizza l'istanza del Device attualmente selezionato
+
 # Cartella temporanea per file intermedi (es. log, cache, ecc.)
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
 os.makedirs(TEMP_DIR, exist_ok=True)

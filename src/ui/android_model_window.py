@@ -118,6 +118,16 @@ class AndroidModelWindow(QMainWindow):
         act_api_key.triggered.connect(self._apri_impostazioni_api)
         options_menu.addAction(act_api_key)
 
+        act_add_device = QAction("Aggiungi Dispositivo", self)
+        act_add_device.triggered.connect(self._apri_aggiungi_dispositivo)
+        options_menu.addAction(act_add_device)
+
+        act_load_device = QAction("Carica Dispositivo", self)
+        act_load_device.triggered.connect(self._apri_carica_dispositivo)
+        options_menu.addAction(act_load_device)
+        
+        options_menu.addSeparator() # Linea di separazione
+
         act_debug_mode = QAction("Modalità Debug", self)
         act_debug_mode.setCheckable(True)
         act_debug_mode.setChecked(config.DEBUG_MODE) 
@@ -134,6 +144,112 @@ class AndroidModelWindow(QMainWindow):
         from src.ui.hapticReader_window import HapticReaderWindow
         self.haptic_reader_window = HapticReaderWindow()
         self.haptic_reader_window.show()
+
+    def _apri_aggiungi_dispositivo(self):
+        """Apre un form per aggiungere un nuovo dispositivo."""
+        from PyQt6.QtWidgets import QDoubleSpinBox, QFormLayout
+        from src.utils.device_models import Device
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Aggiungi Nuovo Tablet")
+        dialog.resize(400, 350)
+        layout = QFormLayout(dialog)
+
+        # Campi di input
+        entry_name = QLineEdit()
+        entry_name.setPlaceholderText("Es. iPad Pro 11, Samsung Tab S8...")
+        
+        def crea_spinbox():
+            sb = QDoubleSpinBox()
+            sb.setMaximum(2000.0) # Massimo 2000 mm
+            sb.setDecimals(1)
+            sb.setSuffix(" mm")
+            return sb
+
+        sb_screen_w = crea_spinbox()
+        sb_screen_h = crea_spinbox()
+        sb_body_w = crea_spinbox()
+        sb_body_h = crea_spinbox()
+        sb_marg_t = crea_spinbox()
+        sb_marg_b = crea_spinbox()
+        sb_marg_l = crea_spinbox()
+        sb_marg_r = crea_spinbox()
+
+        layout.addRow("Nome Dispositivo:", entry_name)
+        layout.addRow("Largh. Schermo (W):", sb_screen_w)
+        layout.addRow("Altez. Schermo (H):", sb_screen_h)
+        layout.addRow("Largh. Scocca (W):", sb_body_w)
+        layout.addRow("Altez. Scocca (H):", sb_body_h)
+        layout.addRow("Margine TOP:", sb_marg_t)
+        layout.addRow("Margine BOTTOM:", sb_marg_b)
+        layout.addRow("Margine LEFT:", sb_marg_l)
+        layout.addRow("Margine RIGHT:", sb_marg_r)
+
+        btn_salva = QPushButton("Salva Dispositivo")
+        layout.addRow(btn_salva)
+
+        def salva():
+            nome = entry_name.text().strip()
+            if not nome:
+                QMessageBox.warning(dialog, "Errore", "Inserisci un nome per il dispositivo.")
+                return
+
+            nuovo_dev = Device(
+                nome, sb_screen_w.value(), sb_screen_h.value(),
+                sb_body_w.value(), sb_body_h.value(),
+                sb_marg_t.value(), sb_marg_b.value(),
+                sb_marg_l.value(), sb_marg_r.value()
+            )
+
+            # Carica, Aggiunge e Salva
+            dispositivi = Device.load_devices(config.DEVICES_FILE)
+            dispositivi.append(nuovo_dev)
+            Device.save_devices(config.DEVICES_FILE, dispositivi)
+
+            # Impostalo automaticamente come attivo
+            config.ACTIVE_DEVICE = nuovo_dev
+            QMessageBox.information(dialog, "Salvato", f"Dispositivo '{nome}' salvato e impostato come attivo!")
+            self.console_output.append(f">> Dispositivo attivo impostato su: {nome}")
+            dialog.accept()
+
+        btn_salva.clicked.connect(salva)
+        dialog.exec()
+
+    def _apri_carica_dispositivo(self):
+        """Apre un pop-up con un menu a tendina per scegliere un dispositivo salvato."""
+        from PyQt6.QtWidgets import QComboBox
+        from src.utils.device_models import Device
+
+        dispositivi = Device.load_devices(config.DEVICES_FILE)
+        
+        if not dispositivi:
+            QMessageBox.warning(self, "Nessun Dispositivo", "Non hai ancora salvato alcun dispositivo.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Carica Dispositivo")
+        dialog.resize(300, 150)
+        layout = QVBoxLayout(dialog)
+
+        layout.addWidget(QLabel("Seleziona il tablet di destinazione:"))
+        combo = QComboBox()
+        for dev in dispositivi:
+            combo.addItem(dev.name, userData=dev) # Salviamo l'intero oggetto nascosto nell'item
+        layout.addWidget(combo)
+
+        btn_carica = QPushButton("Imposta come Attivo")
+        layout.addWidget(btn_carica)
+
+        def carica():
+            # Recuperiamo l'oggetto Device dall'item selezionato
+            selezionato = combo.currentData()
+            config.ACTIVE_DEVICE = selezionato
+            QMessageBox.information(dialog, "Caricato", f"Dispositivo attivo impostato su: {selezionato.name}")
+            self.console_output.append(f">> Dispositivo attivo impostato su: {selezionato.name}")
+            dialog.accept()
+
+        btn_carica.clicked.connect(carica)
+        dialog.exec()
 
     def _init_central_widget(self):
         central_widget = QWidget()
@@ -269,36 +385,48 @@ class AndroidModelWindow(QMainWindow):
         """Cattura il JSON raw di Gemini e prosegue con ELK (Fase 2 e 3)."""
         try:
             self.update_ui_progress("Avvio motore grafico ELK (Node.js)...")
-            
             # 1. Pulisce la risposta di Gemini
             clean_json = raw_json.replace("```json", "").replace("```", "").strip()
             graph_data = json.loads(clean_json)
+
+            # --- NUOVO: CONTROLLO E INIEZIONE DISPOSITIVO ---
+            if getattr(config, 'ACTIVE_DEVICE', None) is None:
+                self.update_ui_progress("ATTENZIONE: Nessun dispositivo selezionato. Uso valori di default.")
+            else:
+                dev = config.ACTIVE_DEVICE
+                graph_data['screen_width'] = dev.screen_width
+                graph_data['screen_height'] = dev.screen_height
+                graph_data['margin_top'] = dev.margin_top
+                graph_data['margin_bottom'] = dev.margin_bottom
+                graph_data['margin_left'] = dev.margin_left
+                graph_data['margin_right'] = dev.margin_right
+                graph_data['tablet_actual_width'] = dev.body_width
+                graph_data['tablet_actual_height'] = dev.body_height
+            # ------------------------------------------------
             
             # 2. Salva il file temporaneo
-            input_path = os.path.join(config.TEMP_DIR, "temp_graph.json")
             output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
-            with open(input_path, "w") as f:
-                json.dump(graph_data, f)
+            json_string = json.dumps(graph_data)
             
             # 3. Esegue ELK (Javascript)
-            cmd = ["node", "src/utils/run_elk.js", input_path, output_path]
-            subprocess.run(cmd, check=True)
+            cmd = ["node", "src/utils/run_elk.js", output_path]
+            subprocess.run(cmd, input=json_string, text=True, check=True)
 
             # 4. Converte il risultato in OpenSCAD
             self.update_ui_progress("Conversione coordinate spaziali in modello 3D...")
-            from src.utils.json_to_scad import json_to_scad
+            from src.utils.json_to_scad import generate_scad
             
             # Assicurati che la cartella output esista
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
             
-            json_to_scad(output_path, scad_output)
+            generate_scad(output_path, scad_output)
             
             self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
 
             # Compilazione in stl
             cmd = ["openscad", "-o", os.path.join(config.OUTPUT_DIR, "android_model.stl"), scad_output]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True,)
             self.viewer_3d.load_stl(os.path.join(config.OUTPUT_DIR, "android_model.stl"))
 
             self.send_btn.setEnabled(True)
