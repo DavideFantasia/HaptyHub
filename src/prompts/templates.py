@@ -104,9 +104,21 @@ class ElkBaseTemplate(BaseTemplate):
 
 
 
-class ElkFlowChartTemplate(ElkBaseTemplate):
+class ELKFlowChartTemplate(ElkBaseTemplate):
     """Template ELK specifico per l'estrazione di diagrammi di flusso."""
     
+    def __init__(self):
+        self.__prompt_path = os.path.join(config.PROMPT_DIR, "interactive")
+        self.__prompt1 = ""
+
+    def get_phase_1(self) -> str:
+        base_prompt = self.get_from_file(os.path.join(self.__prompt_path, "FlowChart.txt"))
+        self.__prompt1 = base_prompt
+        return self.__prompt1
+    
+class ELKGraphTemplate(ElkBaseTemplate):
+    """Template ELK specifico per l'estrazione di grafi generici."""
+        
     def __init__(self):
         self.__prompt_path = os.path.join(config.PROMPT_DIR, "interactive")
         self.__prompt1 = ""

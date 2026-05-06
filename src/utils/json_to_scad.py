@@ -1,10 +1,16 @@
 import json
 
 
-def generate_scad(json_filepath, scad_filepath):
+def json_to_scad(json_filepath, scad_filepath):
     # 1. LOAD & PARSE DATA
     with open(json_filepath, 'r') as file:
         data = json.load(file)
+
+    # --- SCUDO ANTI-LISTA ---
+    # Se ELK ha restituito una lista per errore, prendiamo il primo elemento (il grafico)
+    if isinstance(data, list):
+        data = data[0] if len(data) > 0 else {}
+    # ------------------------
 
     # Store the dimensions of the tablet screen
     screen_width = data.get('screen_width', 0)
@@ -243,7 +249,3 @@ union() {{
         f.write("\n".join(scad_lines))
         
     print(f"Successfully generated final OpenSCAD file: {scad_filepath}")
-
-    
-
-generate_scad('output_coordinates.json', 'flowchart.scad')

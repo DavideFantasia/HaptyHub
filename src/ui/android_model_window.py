@@ -6,12 +6,13 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from src.ui.panels import ELK_FlowChartPanel
+from src.ui.panels import ELK_FlowChartPanel, ELK_GraphPanel
 
 # Importa la configurazione e gli helper
-import config, json, subprocess
+import config, json, subprocess, time
 from src.utils.image_helper import load_and_scale_image
 from src.utils.gemini_worker import GeminiWorker
+from src.utils.stl_viewer import STLViewerWidget
 
 # --- Widget personalizzato per il drag and drop ---
 class ImageDropLabel(QLabel):
@@ -81,7 +82,7 @@ class AndroidModelWindow(QMainWindow):
         act_flow.setCheckable(True)
         act_flow.triggered.connect(lambda: self.switch_template(0))
         template_group.addAction(act_flow)
-        '''
+
         act_dir = QAction("Direct Graph", self)
         act_dir.setCheckable(True)
         act_dir.triggered.connect(lambda: self.switch_template(1))
@@ -92,7 +93,7 @@ class AndroidModelWindow(QMainWindow):
         act_undir.setCheckable(True)
         act_undir.triggered.connect(lambda: self.switch_template(2))
         template_group.addAction(act_undir)
-        
+        '''
         act_set = QAction("Set Theory", self)
         act_set.setCheckable(True)
         act_set.triggered.connect(lambda: self.switch_template(3))
@@ -100,7 +101,7 @@ class AndroidModelWindow(QMainWindow):
 
         template_menu.addActions([act_flow, act_dir, act_undir, act_set])
         '''
-        template_menu.addActions([act_flow])
+        template_menu.addActions([act_flow, act_dir, act_undir])
         # ======== Menu 'Tattile' ========
         tactile_menu = menu_bar.addMenu("&Tattile")
         act_calibrate = QAction("Calibrazione Sensore", self)
@@ -165,17 +166,22 @@ class AndroidModelWindow(QMainWindow):
         # NOTA: Per Android, questi pannelli dovrebbero restituire i nuovi "ElkTemplates" 
         # (quelli che hanno get_phase_2 = None) per avviare la pipeline corretta.
         self.panel_flow = ELK_FlowChartPanel()                   # Indice 0
-        #self.panel_dir = GraphFormPanel(is_directed=True)       # Indice 1
-        #self.panel_undir = GraphFormPanel(is_directed=False)    # Indice 2
+        self.panel_dir = ELK_GraphPanel()                        # Indice 1
+        self.panel_undir = ELK_GraphPanel()                      # Indice 2
         #self.panel_set = SetTheoryPanel()                       # Indice 3
         
         self.stacked_widget.addWidget(self.panel_flow)
-        #self.stacked_widget.addWidget(self.panel_dir)
-        #self.stacked_widget.addWidget(self.panel_undir)
+        self.stacked_widget.addWidget(self.panel_dir)
+        self.stacked_widget.addWidget(self.panel_undir)
         #self.stacked_widget.addWidget(self.panel_set)
 
         self.stacked_widget.setCurrentIndex(0)
         self.right_col_layout.addWidget(self.stacked_widget, stretch=1)
+
+        # 2. IL VISUALIZZATORE 3D (al centro)
+        self.viewer_3d = STLViewerWidget()
+        self.viewer_3d.setMinimumHeight(300) # Dai un'altezza minima per non schiacciarlo
+        self.right_col_layout.addWidget(self.viewer_3d)
 
         self.console_output = QTextEdit()
         self.console_output.setReadOnly(True) 
@@ -270,25 +276,31 @@ class AndroidModelWindow(QMainWindow):
             
             # 2. Salva il file temporaneo
             input_path = os.path.join(config.TEMP_DIR, "temp_graph.json")
-            output_path = os.path.join(config.TEMP_DIR, "output_coords.json")
+            output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
             with open(input_path, "w") as f:
                 json.dump(graph_data, f)
             
             # 3. Esegue ELK (Javascript)
             cmd = ["node", "src/utils/run_elk.js", input_path, output_path]
             subprocess.run(cmd, check=True)
-            
+
             # 4. Converte il risultato in OpenSCAD
             self.update_ui_progress("Conversione coordinate spaziali in modello 3D...")
-            from src.utils.json_to_scad import convert_to_scad
+            from src.utils.json_to_scad import json_to_scad
             
             # Assicurati che la cartella output esista
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
             
-            convert_to_scad(output_path, scad_output)
+            json_to_scad(output_path, scad_output)
             
             self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
+
+            # Compilazione in stl
+            cmd = ["openscad", "-o", os.path.join(config.OUTPUT_DIR, "android_model.stl"), scad_output]
+            subprocess.run(cmd, check=True)
+            self.viewer_3d.load_stl(os.path.join(config.OUTPUT_DIR, "android_model.stl"))
+
             self.send_btn.setEnabled(True)
             self._cleanup_worker()
             
@@ -308,8 +320,77 @@ class AndroidModelWindow(QMainWindow):
         self._cleanup_worker()
 
     def _apri_impostazioni_api(self):
-        # (Stesso codice del dialogo API Key originale...)
-        pass 
+        """Apre un QDialog modale per inserire o modificare l'API Key di Gemini."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Impostazione API Key")
+        dialog.resize(450, 180)
+        dialog.setModal(True) # Blocca la finestra sottostante finché non si chiude
+
+        layout = QVBoxLayout(dialog)
+
+        # --- Testo descrittivo con Link cliccabile (grazie al formato RichText) ---
+        testo_html = (
+            "<div align='center'>"
+            "Incolla la tua chiave di Gemini, se non ne sei in possesso,<br>"
+            "puoi prenderla da qui:<br>"
+            "<a href='https://aistudio.google.com/app/api-keys'>https://aistudio.google.com/app/api-keys</a>"
+            "</div>"
+        )
+        lbl_info = QLabel(testo_html)
+        lbl_info.setOpenExternalLinks(True) # Permette il click diretto sul link
+        lbl_info.setTextFormat(Qt.TextFormat.RichText)
+        lbl_info.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        layout.addWidget(lbl_info)
+
+        # --- Campo di input per la chiave ---
+        entry_chiave = QLineEdit()
+        entry_chiave.setPlaceholderText("Inserisci la tua API Key...")
+        # Usa EchoMode se in futuro vuoi nasconderla stile password (entry_chiave.setEchoMode(QLineEdit.EchoMode.Password))
+        layout.addWidget(entry_chiave)
+
+        # --- Lettura pre-caricamento dal file .env ---
+        env_path = os.path.join(os.getcwd(), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for linea in f:
+                    if linea.startswith("GEMINI_API_KEY="):
+                        chiave_attuale = linea.strip().split("=", 1)[1]
+                        entry_chiave.setText(chiave_attuale)
+
+        # --- Pulsante Salva e sua logica ---
+        btn_salva = QPushButton("Salva")
+        btn_salva.setMinimumHeight(35)
+        layout.addWidget(btn_salva)
+
+        def salva_chiave():
+            nuova_chiave = entry_chiave.text().strip()
+            linee = []
+            
+            # Legge il file esistente per non sovrascrivere OPENAI_API_KEY
+            if os.path.exists(env_path):
+                with open(env_path, "r") as f:
+                    linee = f.readlines()
+            
+            chiave_aggiornata = False
+            for i, linea in enumerate(linee):
+                if linea.startswith("GEMINI_API_KEY="):
+                    linee[i] = f"GEMINI_API_KEY={nuova_chiave}\n"
+                    chiave_aggiornata = True
+                    break
+            
+            if not chiave_aggiornata:
+                linee.append(f"GEMINI_API_KEY={nuova_chiave}\n")
+                
+            with open(env_path, "w") as f:
+                f.writelines(linee)
+                
+            QMessageBox.information(dialog, "Successo", "API Key salvata correttamente nel file .env!")
+            dialog.accept() # Chiude il QDialog con successo
+
+        btn_salva.clicked.connect(salva_chiave)
+
+        # Mostra il dialogo
+        dialog.exec()
 
     def _toggle_debug_mode(self, checked):
         config.DEBUG_MODE = checked

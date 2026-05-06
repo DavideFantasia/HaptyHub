@@ -13,6 +13,16 @@ else
     echo "  -> Cartella venv non trovata, salto."
 fi
 
+echo "[1.5/3] Rimozione modulo ELK"
+if [ -d "node_modules" ]; then
+	npm unistall elkjs
+	rm -r -f node_modules
+	rm *.json
+	echo " -> Modulo Rimosso"
+else
+	echo " -> Cartella non Rimossa"
+fi
+
 # 2. Rimozione delle Regole udev
 echo "[2/3] Rimozione delle regole hardware (richiede password amministratore)..."
 if [ -f "/etc/udev/rules.d/99-nanovna-sensor.rules" ]; then

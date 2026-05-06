@@ -10,3 +10,7 @@ pywin32; sys_platform == 'win32'			# per l'integrazione con Windows COM
 PyQt6			# per la creazione dell'interfaccia grafica
 PyQt6-Qt6		# per la gestione delle dipendenze di Qt6
 PyQt6_sip		# per la gestione delle estensioni C++ di PyQt6
+numpy           # per il calcolo numerico e la gestione degli array 
+numpy-stl       # per la creazione di modelli 3D in formato STL
+PyOpenGL        # per la visualizzazione 3D e il rendering
+PyOpenGL_accelerate # per migliorare le prestazioni di PyOpenGL

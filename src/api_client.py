@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 import PIL.Image
-import config
+import config, os
 
 class GeminiClient:
     def __init__(self):
@@ -41,9 +41,37 @@ class TestClient:
 
     def __init__(self):
         self.client = None
+
+        # Definisci il percorso del file temporaneo (rispetto a dove esegui lo script)
+        self.temp_graph_path = os.path.join(config.TEMP_DIR, "test_temp_graph.json")
     
     def analyze_image(self, image_path: str, prompt: str) -> str:
-        return "Test Analyze"
+        """
+        In modalità test, cerca un file JSON pre-generato. 
+        Se lo trova, lo restituisce, altrimenti genera un JSON fittizio.
+        """
+
+        # Se il file temp_graph.json esiste, leggilo e restituiscilo
+        if os.path.exists(self.temp_graph_path):
+            print(f"🛠️ [TEST CLIENT] Trovato {self.temp_graph_path}. Caricamento dati mock...")
+            try:
+                # Usiamo f.read() e NON json.load() perché l'API vera restituisce 
+                # una stringa di testo, non un dizionario Python.
+                with open(self.temp_graph_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                print(f"❌ Errore nella lettura del file di test: {e}")
+                return f'{{"error": "Impossibile leggere il file di test: {e}"}}'
+        
+        # Fallback se il file non c'è (JSON base fittizio per non far crashare l'app)
+        print("🛠️ [TEST CLIENT] File temp_graph.json non trovato. Uso JSON di fallback.")
+        fallback_json = """
+        {
+            "nodes": [{"id": "n1", "label": "Nodo Test"}],
+            "edges": []
+        }
+        """
+        return fallback_json.strip()
     
     def generate_scad(self, description: str, system_prompt: str) -> str:
-        return "Test Generate:\n"+system_prompt
+        return "System prompt: " + system_prompt

@@ -1,42 +1,35 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QFormLayout, QMessageBox)
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
-import math
 import numpy as np
+from scipy.signal import find_peaks
 
-from src.models.graph_models import Node #classe per la rappresentazione dei nodi
-from src.models.graph_models import HapticGraph #classe per la rappresentazione del grafo
-
-from src.utils.sensor_reader import NVAReader #classe per la lettura dei dati dalla scheda
-from src.utils.sensor_worker import SensorWorker #classe per la gestione del thread di lettura dei dati dal sensore
+from src.models.graph_models import Node
+from src.models.graph_models import HapticGraph
+from src.utils.sensor_reader import NVAReader
+from src.utils.sensor_worker import SensorWorker
 
 class CalibrationWindow(QMainWindow):
-    # Definizione degli Stati
-    STATE_BASELINE = 0
-    STATE_WAIT_TOUCH = 1
-    STATE_RECORDING_PEAK = 2
-    STATE_FORM_ENTRY = 3
-
+    # Definizione degli Stati Semplificata (Solo 2 stati reali)
+    STATE_ACQUIRING = 0
+    STATE_FORM_ENTRY = 1
 
     def __init__(self, sensor= NVAReader()):
         super().__init__()
-        self.setWindowTitle("Procedura Associazione Nodi")
-        
+        self.setWindowTitle("Associazione Nodi")
         self.resize(1000, 600)
         
         self.sensor = sensor
         self.haptic_graph = HapticGraph()
         
-        # Variabili per la Macchina a Stati e Signal Processing
-        self.current_state = self.STATE_BASELINE
+        self.current_state = self.STATE_ACQUIRING
+        self.baseline_frames = [] 
         self.baseline_data = None
-        self.baseline_frames = [] # Buffer per calcolare la media iniziale
-        self.threshold = 0.1 # SOGLIA: Modifica questo valore in base al rumore del tuo sensore
         
-        self.touch_buffer = []      # Raccoglie i picchi durante il tocco
-        self.final_fingerprint = [] # La "impronta digitale" finale da salvare nel nodo
+        self.nodi_rilevati = []
+        self.nodo_corrente_index = 0
 
         self._setup_ui()
 
@@ -49,164 +42,192 @@ class CalibrationWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
         self.layout = QHBoxLayout(self.main_widget)
 
-        # --- SINISTRA: Grafico Real-Time (PyQtGraph) ---
-        self.plot_widget = pg.PlotWidget(title="Dati Sensore (Magnitudo Lin)")
-        self.plot_widget.setYRange(0, 1) # Assumiamo magnitudo tra 0 e 1
+        # --- Grafico Real-Time ---
+        self.plot_widget = pg.PlotWidget(title="Dati Sensore (Live vs Baseline)")
+        self.plot_widget.setYRange(0, 80)
+        self.plot_widget.setXRange(0, 100)
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_curve = self.plot_widget.plot(pen=pg.mkPen('y', width=2)) # Linea gialla
         
-        # Linea orizzontale rossa per mostrare la soglia (invisibile all'inizio)
-        self.thresh_line = pg.InfiniteLine(angle=0, pen=pg.mkPen('r', style=Qt.PenStyle.DashLine))
-        self.plot_widget.addItem(self.thresh_line)
-        self.thresh_line.setVisible(False)
+        # Curva LIVE (Gialla, in continuo movimento)
+        self.plot_curve_live = self.plot_widget.plot(pen=pg.mkPen('y', width=2))
+        
+        # Curva BASELINE (Ciano, appare quando SciPy trova i nodi)
+        self.plot_curve_baseline = self.plot_widget.plot(pen=pg.mkPen('c', width=2, style=Qt.PenStyle.DashLine))
 
         self.layout.addWidget(self.plot_widget, stretch=2)
 
-        # --- DESTRA: Procedura Guidata (Wizard) ---
+        # --- Procedura Guidata ---
         self.wizard_layout = QVBoxLayout()
         
-        self.lbl_stato = QLabel("STATO: Calibrazione Iniziale")
-        self.lbl_stato.setStyleSheet("color: orange; font-weight: bold;")
+        self.lbl_stato = QLabel("STATO: Acquisizione Linea di Base")
+        self.lbl_stato.setStyleSheet("color: orange; font-weight: bold; font-size: 18px;")
         self.wizard_layout.addWidget(self.lbl_stato)
 
-        self.lbl_istruzioni = QLabel("Non toccare il sensore...\nAcquisizione linea di base in corso.")
+        self.lbl_istruzioni = QLabel("Non toccare il sensore...\nScansione del circuito in corso.")
         self.lbl_istruzioni.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_istruzioni.setStyleSheet("font-size: 16px; font-weight: bold; margin: 20px 0;")
+        self.lbl_istruzioni.setStyleSheet("font-size: 16px; margin: 20px 0;")
         self.wizard_layout.addWidget(self.lbl_istruzioni)
 
-        # Form per i dati del nodo
+        # Form per i dati
         self.form_layout = QFormLayout()
         self.entry_node_id = QLineEdit()
         self.entry_desc = QLineEdit()
         self.entry_node_id.setEnabled(False)
         self.entry_desc.setEnabled(False)
         self.form_layout.addRow("ID Nodo:", self.entry_node_id)
-        self.form_layout.addRow("Descrizione:", self.entry_desc)
+        self.form_layout.addRow("Descrizione Vocale:", self.entry_desc)
         self.wizard_layout.addLayout(self.form_layout)
 
-        self.btn_salva = QPushButton("Salva Nodo e Continua")
+        # Bottone Verde "Salva"
+        self.btn_salva = QPushButton("Associa Nodo")
         self.btn_salva.setEnabled(False)
+        self.btn_salva.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 8px;")
         self.btn_salva.clicked.connect(self.salva_nodo_corrente)
         self.wizard_layout.addWidget(self.btn_salva)
         
-        self.wizard_layout.addStretch() # Spinge tutto verso l'alto
+        self.wizard_layout.addStretch() 
         self.layout.addLayout(self.wizard_layout, stretch=1)
 
-        self.btn_termina = QPushButton("Termina ed Esporta")
-        #self.btn_termina.setEnabled(False)
+        self.btn_termina = QPushButton("Termina ed Esporta JSON")
         self.btn_termina.clicked.connect(self.termina_e_salva)
         self.wizard_layout.addWidget(self.btn_termina)
 
-    def termina_e_salva(self):
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+    def process_sensor_data(self, dati_raw):
+        """Metodo chiamato a ripetizione per streammare l'onda."""
+        k = 50
+        mags = np.array([k*((1-re**2-im**2)/(1-re)**2+im**2) for re, im in dati_raw])
         
-        if len(self.haptic_graph.nodes) == 0:
-            QMessageBox.warning(self, "Attenzione", "Nessun nodo calibrato da salvare.")
-            return
-        
-        # Mette in pausa il thread
-        if hasattr(self, 'worker'):
-            self.worker.is_paused = True
-
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Salva Grafo Haptico", "grafo_sensore.json", "JSON Files (*.json)"
-        )
-        
-        if filepath:
-            self.haptic_graph.to_json(filepath)
-            QMessageBox.information(self, "Successo", f"Grafo salvato in:\n{filepath}")
-            self.close() 
-        else:
-            # L'utente ha annullato, togliamo la pausa
-            if hasattr(self, 'worker'):
-                self.worker.is_paused = False
-
-    def process_sensor_data(self,dati_raw):
-        """Metodo chiamato dal QTimer ogni 100ms. È il 'cervello' della macchina a stati."""
-        # Se siamo in fase di inserimento dati, non aggiorniamo il grafico per "congelarlo" sul picco
-        if self.current_state == self.STATE_FORM_ENTRY:
-            return
-
-        mags = np.array([math.sqrt(re**2 + im**2) for re, im in dati_raw])
-        
-        # Controllo di sicurezza
         if len(mags) != 101: 
             return
             
-        # 2. MACCHINA A STATI
-        if self.current_state == self.STATE_BASELINE:
-            self._handle_state_baseline(mags)
-            self.plot_curve.setData(mags)
+        # ==========================================
+        # NORMALIZZAZIONE MATEMATICA
+        # ==========================================
+        pavimento_attuale = np.min(mags)
+        mags_ancorati = mags - pavimento_attuale
+        mags = mags_ancorati
+        # ==========================================
 
-        elif self.current_state in [self.STATE_WAIT_TOUCH, self.STATE_RECORDING_PEAK]:
-            diff = np.abs(mags - self.baseline_data)
-            max_diff = np.max(diff)
-            
-            self.plot_curve.setData(mags) 
+        # CONTINUIAMO AD AGGIORNARE IL GRAFICO SEMPRE E COMUNQUE!
+        self.plot_curve_live.setData(mags)
 
-            if self.current_state == self.STATE_WAIT_TOUCH:
-                if max_diff > self.threshold:
-                    self.touch_buffer = [mags]
-                    self._cambia_stato(self.STATE_RECORDING_PEAK)
+        # Logica di Acquisizione Iniziale
+        if self.current_state == self.STATE_ACQUIRING:
+            self.baseline_frames.append(mags)
             
-            elif self.current_state == self.STATE_RECORDING_PEAK:
-                if max_diff > self.threshold:
-                    self.touch_buffer.append(mags)
-                else:
-                    if len(self.touch_buffer) > 0:
-                        curva_media = np.mean(self.touch_buffer, axis=0)
-                        self.final_fingerprint = curva_media.tolist()
-                    
-                    self._cambia_stato(self.STATE_FORM_ENTRY)
-                    
-    def _handle_state_baseline(self, mags):
-        """Raccoglie i primi frame per stabilire lo 'zero' del sensore."""
+            if len(self.baseline_frames) >= 15: # 1.5 secondi di ascolto
+                self.baseline_data = np.mean(self.baseline_frames, axis=0)
+                
+                # Fissiamo la linea ciano tratteggiata per far vedere la baseline "congelata"
+                self.plot_curve_baseline.setData(self.baseline_data)
+                
+                # Cerchiamo i picchi sulla media congelata
+                self.esegui_scipy_discovery()
+                
+
+    def esegui_scipy_discovery(self):
+        """Usa SciPy per trovare i nodi fisici e prepara l'interfaccia utente."""
         
-        self.baseline_frames.append(mags)
-        if len(self.baseline_frames) >= 10: # Dopo ~2 secondi (10 frame x 200ms)
-            # Calcola la media lungo l'asse 0 (media di ogni singolo punto della scansione)
-            self.baseline_data = np.mean(self.baseline_frames, axis=0)
+        picchi_trovati, _ = find_peaks(self.baseline_data, prominence=0.5, distance=3)
+        self.nodi_rilevati = picchi_trovati.tolist()
+        
+        # Disegnamo i pallini rossi sui picchi trovati
+        if hasattr(self, 'scatter_peaks'):
+            self.plot_widget.removeItem(self.scatter_peaks)
             
-            # Imposta la linea rossa della soglia sul grafico per aiuto visivo
-            self.thresh_line.setPos(self.threshold)
-            self.thresh_line.setVisible(True)
-            self.plot_widget.setYRange(0, self.threshold * 5) # Adatta lo zoom
+        valori_picchi = [self.baseline_data[i] for i in self.nodi_rilevati]
+        
+        # Creiamo lo ScatterPlot e lo rendiamo interattivo
+        self.scatter_peaks = pg.ScatterPlotItem(
+            x=self.nodi_rilevati, 
+            y=valori_picchi, 
+            pen=None, 
+            symbol='o', 
+            brush='r', 
+            size=14,  # Leggermente più grandi per essere facili da cliccare
+            hoverable=True, # Diventano luminosi quando ci passi sopra col mouse
+            hoverSymbol='o',
+            hoverSize=18,
+            hoverPen=pg.mkPen('w', width=2),
+            hoverBrush='g'
+        )
+        
+        # Colleghiamo l'evento click alla nostra funzione
+        self.scatter_peaks.sigClicked.connect(self.on_scatter_clicked)
+        
+        self.plot_widget.addItem(self.scatter_peaks)
+        
+        if len(self.nodi_rilevati) > 0:
+            self.current_state = self.STATE_FORM_ENTRY
             
-            self._cambia_stato(self.STATE_WAIT_TOUCH)
-
-    def _cambia_stato(self, nuovo_stato):
-        """Gestisce le transizioni visive della UI in base allo stato."""
-        self.current_state = nuovo_stato
-
-        if nuovo_stato == self.STATE_WAIT_TOUCH:
-            self.lbl_stato.setText("STATO: Attesa Tocco")
-            self.lbl_stato.setStyleSheet("color: green; font-weight: bold;")
-            self.lbl_istruzioni.setText(f"Tocca il NODO {len(self.haptic_graph.nodes) + 1}\ne tieni premuto.")
-            self.entry_node_id.setEnabled(False)
-            self.entry_desc.setEnabled(False)
-            self.btn_salva.setEnabled(False)
-
-        elif nuovo_stato == self.STATE_RECORDING_PEAK:
-            self.lbl_stato.setText("STATO: Acquisizione in corso...")
-            self.lbl_stato.setStyleSheet("color: red; font-weight: bold;")
-            self.lbl_istruzioni.setText("Picco Rilevato!\nRilascia il nodo ora.")
-
-        elif nuovo_stato == self.STATE_FORM_ENTRY:
-            self.lbl_stato.setText("STATO: Compilazione Dati")
-            self.lbl_stato.setStyleSheet("color: blue; font-weight: bold;")
-            self.lbl_istruzioni.setText("Impronta digitale (Fingerprint) acquisita con successo!\nCompila i dati e salva.")
+            # Teniamo traccia di quali nodi abbiamo già salvato
+            self.nodi_salvati = set() 
+            self.nodo_selezionato_index = None # Indice X del nodo attualmente cliccato
             
-            # Abilita il form
-            self.entry_node_id.setEnabled(True)
-            self.entry_desc.setEnabled(True)
-            self.btn_salva.setEnabled(True)
+            self.lbl_stato.setText("STATO: Mappatura Libera")
+            self.lbl_stato.setStyleSheet("color: #2196F3; font-weight: bold; font-size: 18px;")
+            self.lbl_istruzioni.setText(f"Trovati {len(self.nodi_rilevati)} nodi!\n\nClicca su un pallino rosso nel grafico\nper associargli un nome.")
             
-            # Pre-compila l'ID in automatico
-            self.entry_node_id.setText(f"Nodo_{len(self.haptic_graph.nodes) + 1}")
-            self.entry_desc.setFocus() # Mette il cursore sulla descrizione
+        else:
+            QMessageBox.warning(self, "Attenzione", "Nessun nodo rilevato.")
+            self.baseline_frames = []
+
+    def on_scatter_clicked(self, plot, points):
+        """Gestisce il click su uno dei pallini rossi."""
+        # points è una lista dei punti cliccati (di solito 1)
+        if len(points) == 0:
+            return
+            
+        punto = points[0]
+        indice_x = int(punto.pos().x())
+        
+        # Controlliamo se questo nodo è già stato salvato
+        if indice_x in self.nodi_salvati:
+            QMessageBox.information(self, "Info", "Hai già associato questo nodo!")
+            return
+            
+        # Aggiorniamo la UI per questo specifico nodo
+        self.nodo_selezionato_index = indice_x
+        
+        self.lbl_istruzioni.setText(f"Stai configurando il Nodo a Frequenza: {indice_x}")
+        self.lbl_istruzioni.setStyleSheet("font-size: 16px; margin: 20px 0; color: #E91E63; font-weight: bold;")
+        
+        self.entry_node_id.setEnabled(True)
+        self.entry_desc.setEnabled(True)
+        self.btn_salva.setEnabled(True)
+        
+        # Suggerimento automatico dell'ID
+        numero_nodo = len(self.nodi_salvati) + 1
+        self.entry_node_id.setText(f"Nodo_{numero_nodo}")
+        self.entry_desc.clear()
+        self.entry_desc.setFocus()
+        
+        # Opzionale: Cambiamo il colore del pallino cliccato per dare feedback visivo
+        # (Richiede un po' di manipolazione dei brush di PyQtGraph, ma l'hoverable fa già un buon lavoro)
+
+    def prepara_form_nodo(self):
+        """Aggiorna i testi e abilita i bottoni per compilare il nodo N."""
+        self.lbl_stato.setText("STATO: Associazione Vocale")
+        self.lbl_stato.setStyleSheet("color: #2196F3; font-weight: bold; font-size: 18px;")
+        
+        indice = self.nodi_rilevati[self.nodo_corrente_index]
+        totale = len(self.nodi_rilevati)
+        
+        self.lbl_istruzioni.setText(f"Trovati {totale} nodi!\n\nStai configurando il NODO {self.nodo_corrente_index + 1} di {totale}\n(Punto di Risonanza: {indice})")
+        
+        self.entry_node_id.setEnabled(True)
+        self.entry_desc.setEnabled(True)
+        self.btn_salva.setEnabled(True)
+        self.btn_ignora.setEnabled(True)
+        
+        self.entry_node_id.setText(f"Nodo_{self.nodo_corrente_index + 1}")
+        self.entry_desc.clear()
+        self.entry_desc.setFocus()
 
     def salva_nodo_corrente(self):
-        """Triggerato dal click su 'Salva Nodo e Continua'."""
+        if self.nodo_selezionato_index is None:
+            return
+            
         node_id = self.entry_node_id.text().strip()
         desc = self.entry_desc.text().strip()
 
@@ -214,26 +235,82 @@ class CalibrationWindow(QMainWindow):
             QMessageBox.warning(self, "Attenzione", "Compila entrambi i campi prima di salvare.")
             return
 
-        # Crea l'oggetto Node e lo salva in memoria
-
-        nuovo_nodo = Node(
-            id=node_id, 
-            description=desc, 
-            fingerprint=self.final_fingerprint
-        )
+        # Creiamo il nodo con l'indice del pallino cliccato
+        window_data = { "peak_index": self.nodo_selezionato_index }
+        nuovo_nodo = Node(id=node_id, description=desc, fingerprint=window_data)
         self.haptic_graph.add_node(nuovo_nodo)
         
-        print(f"Salvato: {nuovo_nodo.id} - Fingerprint di {len(nuovo_nodo.fingerprint)} punti acquisito.")
-
-        # Pulisci il form e riavvia il ciclo!
+        # Segniamo il nodo come completato
+        self.nodi_salvati.add(self.nodo_selezionato_index)
+        print(f"Salvato {node_id} all'indice {self.nodo_selezionato_index}")
+        
+        # Resettiamo la UI in attesa del prossimo click
+        self.nodo_selezionato_index = None
         self.entry_node_id.clear()
+        self.entry_node_id.setEnabled(False)
         self.entry_desc.clear()
-        self._cambia_stato(self.STATE_WAIT_TOUCH)
+        self.entry_desc.setEnabled(False)
+        self.btn_salva.setEnabled(False)
+        
+        # Controlliamo se abbiamo finito
+        nodi_rimanenti = len(self.nodi_rilevati) - len(self.nodi_salvati)
+        
+        if nodi_rimanenti > 0:
+            self.lbl_istruzioni.setText(f"Nodo associato con successo!\nClicca su un altro pallino rosso.\n(Ne restano {nodi_rimanenti})")
+            self.lbl_istruzioni.setStyleSheet("font-size: 16px; margin: 20px 0; color: black;")
+        else:
+            self.lbl_stato.setText("STATO: Mappatura Completata")
+            self.lbl_stato.setStyleSheet("color: green; font-weight: bold; font-size: 18px;")
+            self.lbl_istruzioni.setText("Tutti i nodi sono stati associati!\nClicca su 'Termina ed Esporta JSON'.")
+    
+    def ignora_nodo_corrente(self):
+        """Salta l'indice attuale senza inserirlo nel grafo."""
+        print(f"Ignorato picco fantasma all'indice {self.nodi_rilevati[self.nodo_corrente_index]}")
+        
+        # Andiamo direttamente avanti senza salvare nulla
+        self._passa_al_prossimo_nodo()
+
+    def _passa_al_prossimo_nodo(self):
+        """Funzione helper per far avanzare la procedura o concluderla."""
+        self.nodo_corrente_index += 1
+        
+        if self.nodo_corrente_index < len(self.nodi_rilevati):
+            self.prepara_form_nodo()
+        else:
+            self.lbl_stato.setText("STATO: Procedura Completata")
+            self.lbl_stato.setStyleSheet("color: green; font-weight: bold; font-size: 18px;")
+            self.lbl_istruzioni.setText("Tutti i nodi rilevati sono stati analizzati!\nEsporta il file JSON per usarlo.")
+            
+            self.entry_node_id.clear()
+            self.entry_node_id.setEnabled(False)
+            self.entry_desc.clear()
+            self.entry_desc.setEnabled(False)
+            
+            self.btn_salva.setEnabled(False)
+            self.btn_ignora.setEnabled(False)
+
+    def termina_e_salva(self):
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        
+        if len(self.haptic_graph.nodes) == 0:
+            QMessageBox.warning(self, "Attenzione", "Nessun nodo mappato da salvare.")
+            return
+        
+        if hasattr(self, 'worker'):
+            self.worker.is_paused = True
+
+        filepath, _ = QFileDialog.getSaveFileName(self, "Salva Mappa Nodi", "mappa_sensore.json", "JSON Files (*.json)")
+        
+        if filepath:
+            self.haptic_graph.to_json(filepath)
+            QMessageBox.information(self, "Successo", f"File JSON salvato correttamente.")
+            self.close() 
+        else:
+            if hasattr(self, 'worker'):
+                self.worker.is_paused = False
 
     def closeEvent(self, event):
-        """Chiude il thread in modo sicuro."""
         if hasattr(self, 'worker') and self.worker.isRunning():
             self.worker.stop()
-            
         self.deleteLater()
         event.accept()

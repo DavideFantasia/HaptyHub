@@ -8,6 +8,8 @@ from PyQt6.QtCore import Qt, pyqtSignal
 
 from src.ui.panels import GraphFormPanel, FlowChartPanel, SetTheoryPanel
 
+from src.utils.stl_viewer import STLViewerWidget
+
 # Importa la configurazione e gli helper
 import config
 from src.utils.image_helper import load_and_scale_image
@@ -220,6 +222,11 @@ class LandingWindow(QMainWindow):
         self.stacked_widget.setCurrentIndex(1)
         
         self.right_col_layout.addWidget(self.stacked_widget, stretch=1)
+
+        # 2. IL VISUALIZZATORE 3D (al centro)
+        self.viewer_3d = STLViewerWidget()
+        self.viewer_3d.setMinimumHeight(300) # Dai un'altezza minima per non schiacciarlo
+        self.right_col_layout.addWidget(self.viewer_3d)
 
         # --- Console di output/log in sola lettura ---
         self.console_output = QTextEdit()
@@ -436,6 +443,12 @@ class LandingWindow(QMainWindow):
             f"File OpenSCAD generato in:\n{filepath}\n"
         )
         self.console_output.append(success_msg)
+        # Compilazione in stl
+        import subprocess
+        cmd = ["openscad", "-o", os.path.join(config.OUTPUT_DIR, "basic_haptic_model.stl"), filepath]
+        subprocess.run(cmd, check=True)
+        self.viewer_3d.load_stl(os.path.join(config.OUTPUT_DIR, "basic_haptic_model.stl"))
+
         self._cleanup_worker()
 
     def handle_generation_error(self, error_message):
