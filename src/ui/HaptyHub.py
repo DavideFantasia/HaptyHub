@@ -80,14 +80,15 @@ class HaptyHub(QMainWindow):
         sections = [
             ("Modello 3D (Android)", "Genera modelli tattili ottimizzati per tablet.", os.path.join(config.ASSET_DIR, "android_icon.png"), self.open_android_model),
             ("Modello 3D (Circuito)", "Crea modelli tattili pronti alla stampa.", os.path.join(config.ASSET_DIR, "circuit_icon.png"), self.open_circuit_model),
+            ("Bassorilievo Semplice", "Crea modelli tattili base pronti alla stampa, senza interattività.", os.path.join(config.ASSET_DIR, "basrelief_icon.png"), self.open_basic_model),
             ("Lettura Sensore", "Avvia la lettura interattiva da circuito con feedback vocale.", os.path.join(config.ASSET_DIR, "reader_icon.png"), self.open_reader),
             ("Calibrazione", "Associa i nodi fisici alle impronte del sensore.", os.path.join(config.ASSET_DIR, "calibration_icon.png"), self.open_calibration)
         ]
 
-        # Posizionamento nella griglia 2x2
+        # Posizionamento nella griglia 3x2
         for i, (title, desc, icon_path,callback) in enumerate(sections):
             card = NavCard(title, desc, icon_path, callback)
-            grid.addWidget(card, i // 2, i % 2, alignment=Qt.AlignmentFlag.AlignCenter)
+            grid.addWidget(card, i // 3, i % 3, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Applicazione di uno stile moderno tramite QSS
         self.setStyleSheet("""
@@ -109,9 +110,14 @@ class HaptyHub(QMainWindow):
         self.android_win.show()
 
     def open_circuit_model(self):
-        from src.ui.basic_haptic_modeler import LandingWindow # La rinomineremo poi
-        self.circuit_win = LandingWindow()
+        from src.ui.circuit_model_window import CircuitModelWindow # NUOVA FINESTRA
+        self.circuit_win = CircuitModelWindow()
         self.circuit_win.show()
+
+    def open_basic_model(self):
+        from src.ui.basic_haptic_modeler import LandingWindow # LA TUA VECCHIA FINESTRA
+        self.basic_win = LandingWindow()
+        self.basic_win.show()
 
     def open_reader(self):
         from src.ui.hapticReader_window import HapticReaderWindow

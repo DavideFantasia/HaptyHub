@@ -67,7 +67,7 @@ class LandingWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("HaptiGraph")
+        self.setWindowTitle("Modellatore di Bassorilievi Tattici - HaptyHub")
         self.resize(1000, 700) # Una dimensione iniziale decente
 
         # --- Variabili di stato interne ---
