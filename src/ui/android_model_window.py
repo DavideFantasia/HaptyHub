@@ -62,6 +62,8 @@ class AndroidModelWindow(QMainWindow):
         self._setup_layout()
         self._apply_styles()
 
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
     def _init_menu_bar(self):
         """Ricrea la barra dei menu uguale alla versione Circuito."""
         menu_bar = self.menuBar()
@@ -529,3 +531,15 @@ class AndroidModelWindow(QMainWindow):
         if hasattr(self, 'worker') and self.worker is not None:
             self.worker.deleteLater()
             self.worker = None
+
+    def closeEvent(self, event):
+        print("Chiusura finestra: avvio procedura di scaricamento GPU...")
+        # 1. Chiama il cleanup del visualizzatore
+        if hasattr(self, 'viewer_3d'):
+            self.viewer_3d.cleanup()
+        
+        # 2. Imposta l'attributo per la distruzione immediata (se non lo hai già nell'init)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        
+        # 3. Accetta l'evento
+        event.accept()

@@ -54,6 +54,7 @@ class CircuitModelWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Generatore Modello 3D (Circuito / NanoVNA)")
         self.resize(1000, 700)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         
         self.current_image_path = None
         
@@ -303,3 +304,15 @@ class CircuitModelWindow(QMainWindow):
         if hasattr(self, 'worker') and self.worker is not None:
             self.worker.deleteLater()
             self.worker = None
+
+    def closeEvent(self, event):
+        print("Chiusura finestra: avvio procedura di scaricamento GPU...")
+        # 1. Chiama il cleanup del visualizzatore
+        if hasattr(self, 'viewer_3d'):
+            self.viewer_3d.cleanup()
+        
+        # 2. Imposta l'attributo per la distruzione immediata (se non lo hai già nell'init)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        
+        # 3. Accetta l'evento
+        event.accept()
