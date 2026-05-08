@@ -5,9 +5,10 @@ def generate_scad(json_filepath, scad_filepath):
     with open(json_filepath, 'r') as file:
         data = json.load(file)
 
-    # Title of the board
-    board_title = data.get('board_title', 'Flowchart 1')  # Defaults to 'Flowchart' if not found
+    if isinstance(data, list):
+            data = data[0]  
 
+    board_title = data.get('board_title', 'FlowchartVNA')
 
     nodes = {}
     for n in data.get('children', []):
@@ -35,44 +36,75 @@ def generate_scad(json_filepath, scad_filepath):
             all_x.extend([p[0] for p in scad_pts])
             all_y.extend([p[1] for p in scad_pts])
 
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
+    if not all_x:
+        print("No nodes found in JSON!")
+        return
 
+    #min_x, max_x = min(all_x), max(all_x)
+    #min_y, max_y = min(all_y), max(all_y)
+    main_spine_x = list(nodes.values())[0]['x'] # Use the Start node as the center anchor
+    max_reach_x = max([abs(x - main_spine_x) for x in all_x])
+    
+    min_x = main_spine_x - max_reach_x
+    max_x = main_spine_x + max_reach_x
+    
+    min_y, max_y = min(all_y), max(all_y)
+    # --- PYTHON PHYSICAL MATH CALIBRATION ---
+    # We mirror the SCAD grid math here so Python can plot the exact millimeter routing
+    base_width = 150
+    base_height = 210
+    block_size = 12.6
+    margin_x = 10
+    margin_y = 10
+    safe_margin_x = margin_x + (block_size / 2)
+    safe_margin_y = margin_y + (block_size / 2)
+
+    grid_spacing_x = (base_width - (safe_margin_x * 2)) / max(1, (max_x - min_x))
+    grid_spacing_y = (base_height - (safe_margin_y * 2)) / max(1, (max_y - min_y))
+    x_offset = (base_width / 2) - ((min_x + max_x) / 2 * grid_spacing_x)
+    y_offset = (base_height / 2) - ((min_y + max_y) / 2 * grid_spacing_y)
+    
+    def get_px(scad_x):
+        return scad_x * grid_spacing_x + x_offset
+    
     # 2. OPENSCAD TEMPLATE
     scad_header = f"""// --- GLOBAL SETTINGS ---
     
-use <braille.scad>;
+use <braille.scad>; 
 $fn = 64;
-base_width = 150;
-base_height = 210;
-base_thickness = 3;
+base_width = {base_width};
+base_height = {base_height};
+base_thickness = 4;
 relief_depth = 2; 
+recess_radius = 1;
 
-block_size = 12.6;  // Size of the node relief block + 0.1 for clearance
-post_size = 3;      // Size of the stability cube
-post_height = 3;    // Height of the stability cube
+block_size = {block_size};
+post_size = 3;
+post_height = 3;
 edge_radius = 1; 
 shape_radius = (block_size / 2); 
 
 gap = 1.0; 
 arrow_length = 4;
 arrow_width = 3.5;
-margin_x = 10;
-margin_y = 15;
+
+// --- WIRE ROUTING ---
+wire_groove_width = 2.5; 
+wire_groove_depth = 1.5; 
 
 // --- DYNAMIC GRID ---
 min_x = {min_x}; max_x = {max_x};
 min_y = {min_y}; max_y = {max_y};
+// Calculate X and Y scaling independently
+grid_spacing_x = {grid_spacing_x};
+grid_spacing_y = {grid_spacing_y};
+         
+x_offset = (base_width / 2) - ((min_x + max_x) / 2 * grid_spacing_x);
+y_offset = (base_height / 2) - ((min_y + max_y) / 2 * grid_spacing_y);
 
-safe_margin_x = margin_x + (block_size / 2);
-safe_margin_y = margin_y + (block_size / 2);
-grid_spacing = min((base_width - (safe_margin_x * 2)) / max(1, (max_x - min_x)), 
-                   (base_height - (safe_margin_y * 2)) / max(1, (max_y - min_y)));
-                
-x_offset = (base_width / 2) - ((min_x + max_x) / 2 * grid_spacing);
-y_offset = (base_height / 2) - ((min_y + max_y) / 2 * grid_spacing);
 
-function scale_p(p) = [p[0] * grid_spacing + x_offset, p[1] * grid_spacing + y_offset];
+// Apply X scale to the X coordinate, and Y scale to the Y coordinate
+function scale_p(p) = [p[0] * grid_spacing_x + x_offset, p[1] * grid_spacing_y + y_offset];
 
 // --- MODULES ---
 module node_relief(x, y) {{
@@ -87,7 +119,17 @@ module node_post(x, y) {{
         cube([post_size, post_size, post_height]);
 }}
 
+// --- NEW: UNIVERSAL POINT-TO-POINT TRENCH ---
+module bottom_trench(x1, y1, x2, y2) {{
+    start_x = min(x1, x2);
+    start_y = min(y1, y2);
+    w = abs(x2 - x1) + wire_groove_width;
+    h = abs(y2 - y1) + wire_groove_width;
+    translate([start_x - wire_groove_width/2, start_y - wire_groove_width/2, -0.1])
+        cube([w, h, wire_groove_depth + 0.1]);
+}}
 
+// --- TOP EDGE MODULES ---
 module edge_segment(p1, p2, is_start=false, is_end=false) {{
     p1s = scale_p(p1); p2s = scale_p(p2);
     dx = p2s[0] - p1s[0]; dy = p2s[1] - p1s[1];
@@ -114,16 +156,6 @@ module edge_arrow(p1, p2) {{
                 polygon(points=[[0, 0], [-arrow_length , -arrow_width/2], [-arrow_length, arrow_width/2]]);
 }}
 
-module edge_label(p1, p2, text_val) {{
-    p1s = scale_p(p1); p2s = scale_p(p2);
-    angle = atan2(p2s[1] - p1s[1], p2s[0] - p1s[0]);
-    adj_angle = (angle > 90 || angle < -90) ? angle + 180 : angle; 
-    translate([(p1s[0] + p2s[0])/2 - sin(angle)*5, (p1s[1] + p2s[1])/2 + cos(angle)*5, base_thickness - 0.1])
-        rotate([0, 0, adj_angle]) 
-            linear_extrude(height=1.1) 
-                text(text_val, size=4, spacing=1.5, valign="center", halign="center");
-}}
-
 // --- RENDERING ---
 union() {{
     difference() {{
@@ -132,17 +164,59 @@ union() {{
 
     scad_lines = [scad_header]
 
-    # Node reliefs (SUBTRACTION)
     for n in nodes.values():
         scad_lines.append(f"        node_relief({n['x']}, {n['y']});")
 
-    scad_lines.append("    } // End difference")
+    # =========================================================================
+    # --- NEW: THE MASTER ROUTING ALGORITHM ---
+    scad_lines.append("\n        // --- Continuous Snake Routing (Entry & Exit Adjacent) ---")
+    
+    unique_x_coords = sorted(list(set(round(get_px(n['x']), 2) for n in nodes.values())))
+    N = len(unique_x_coords)
+    
+    wire_margin = 8
+    top_y = base_height - wire_margin
+    bot_y = wire_margin
+    ret_y = 3   # The dedicated horizontal return path (safe below the node holes)
+    exit_y = -1 # Exits the physical plastic entirely
+    
+    # 1. ENTRY POINT (Column 0 goes from bottom edge to top margin)
+    scad_lines.append(f"        bottom_trench({unique_x_coords[0]}, {exit_y}, {unique_x_coords[0]}, {top_y}); // Entry")
+    
+    # 2. SNAKE ROUTING
+    for i in range(N - 1):
+        if i % 2 == 0:
+            # At Top: Route Right, then Down
+            scad_lines.append(f"        bottom_trench({unique_x_coords[i]}, {top_y}, {unique_x_coords[i+1]}, {top_y});")
+            scad_lines.append(f"        bottom_trench({unique_x_coords[i+1]}, {top_y}, {unique_x_coords[i+1]}, {bot_y});")
+        else:
+            # At Bottom: Route Right, then Up
+            scad_lines.append(f"        bottom_trench({unique_x_coords[i]}, {bot_y}, {unique_x_coords[i+1]}, {bot_y});")
+            scad_lines.append(f"        bottom_trench({unique_x_coords[i+1]}, {bot_y}, {unique_x_coords[i+1]}, {top_y});")
+            
+    # 3. END-OF-LINE & RETURN PREPARATION
+    if N % 2 == 1:
+        # Ended at TOP. Create a dummy drop column 9mm to the right of the last column.
+        px_dummy = round(unique_x_coords[-1] + 9, 2)
+        scad_lines.append(f"        bottom_trench({unique_x_coords[-1]}, {top_y}, {px_dummy}, {top_y}); // Top connector to dummy")
+        scad_lines.append(f"        bottom_trench({px_dummy}, {top_y}, {px_dummy}, {ret_y}); // Dummy Drop Column")
+        current_x = px_dummy
+    else:
+        # Ended at BOTTOM. Just extend the current column down a bit further to the return path level.
+        scad_lines.append(f"        bottom_trench({unique_x_coords[-1]}, {bot_y}, {unique_x_coords[-1]}, {ret_y}); // Drop to return path")
+        current_x = unique_x_coords[-1]
+        
+    # 4. HORIZONTAL RETURN & EXIT
+    px_exit = round(unique_x_coords[0] + 9, 2) # Exit point is exactly 9mm to the right of Entry
+    scad_lines.append(f"        bottom_trench({current_x}, {ret_y}, {px_exit}, {ret_y}); // Horizontal Return Path")
+    scad_lines.append(f"        bottom_trench({px_exit}, {ret_y}, {px_exit}, {exit_y}); // Exit Point")
+    # =========================================================================
 
-    # Stability Posts (ADDITION)
+    scad_lines.append("    } // End difference\n")
+
     for n in nodes.values():
         scad_lines.append(f"    node_post({n['x']}, {n['y']});")
 
-    # Edges
     for e in edges:
         pts = e['points']
         for i in range(len(pts) - 1):
@@ -151,27 +225,15 @@ union() {{
             scad_lines.append(f"    edge_segment({pts[i]}, {pts[i+1]}, {is_start}, {is_end});")
             if i > 0: 
                 scad_lines.append(f"    edge_elbow({pts[i]});")
-        
         scad_lines.append(f"    edge_arrow({pts[-2]}, {pts[-1]});")
-        
-        #if e['label']:
-        #    scad_lines.append(f"    edge_label({pts[0]}, {pts[1]}, \"{e['label']}\");")
 
-
-
-   #================== EXPERIMENTAL ============================
-
-    # --- CHANGED: DRAW THE TITLE IN THE TOP LEFT ---
-    scad_lines.append("    // --- TACTILE TITLE ---")
-    
-    
+    scad_lines.append("\n    // --- TACTILE TITLE ---")
     scad_lines.append("    translate([5, base_height - 10, base_thickness])")     
     scad_lines.append(f"        braille(\"{board_title}\");")
-    #============================================================
 
     scad_lines.append("}") 
 
     with open(scad_filepath, 'w') as f:
         f.write("\n".join(scad_lines))
-
-generate_scad('output_coordinates.json', 'flowchart_NanoVNA.scad')
+    
+    print(f"Successfully generated: {scad_filepath}")

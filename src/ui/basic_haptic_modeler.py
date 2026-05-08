@@ -67,8 +67,9 @@ class LandingWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("HaptiGraph")
+        self.setWindowTitle("Modellatore di Bassorilievi Tattici - HaptyHub")
         self.resize(1000, 700) # Una dimensione iniziale decente
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         # --- Variabili di stato interne ---
         self.current_image_path = None
@@ -476,3 +477,15 @@ class LandingWindow(QMainWindow):
         if hasattr(self, 'worker') and self.worker is not None:
             self.worker.deleteLater()
             self.worker = None  #taglia il riferimento e forza il __del__
+
+    def closeEvent(self, event):
+        print("Chiusura finestra: avvio procedura di scaricamento GPU...")
+        # 1. Chiama il cleanup del visualizzatore
+        if hasattr(self, 'viewer_3d'):
+            self.viewer_3d.cleanup()
+        
+        # 2. Imposta l'attributo per la distruzione immediata (se non lo hai già nell'init)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        
+        # 3. Accetta l'evento
+        event.accept()

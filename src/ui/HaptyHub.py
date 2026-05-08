@@ -80,14 +80,55 @@ class HaptyHub(QMainWindow):
         sections = [
             ("Modello 3D (Android)", "Genera modelli tattili ottimizzati per tablet.", os.path.join(config.ASSET_DIR, "android_icon.png"), self.open_android_model),
             ("Modello 3D (Circuito)", "Crea modelli tattili pronti alla stampa.", os.path.join(config.ASSET_DIR, "circuit_icon.png"), self.open_circuit_model),
+            ("Bassorilievo Semplice", "Crea modelli tattili base pronti alla stampa, senza interattività.", os.path.join(config.ASSET_DIR, "basrelief_icon.png"), self.open_basic_model),
             ("Lettura Sensore", "Avvia la lettura interattiva da circuito con feedback vocale.", os.path.join(config.ASSET_DIR, "reader_icon.png"), self.open_reader),
             ("Calibrazione", "Associa i nodi fisici alle impronte del sensore.", os.path.join(config.ASSET_DIR, "calibration_icon.png"), self.open_calibration)
         ]
 
-        # Posizionamento nella griglia 2x2
-        for i, (title, desc, icon_path,callback) in enumerate(sections):
+        # Invece di una griglia, usiamo un layout verticale per contenere le due righe
+        cards_v_layout = QVBoxLayout()
+        cards_v_layout.setSpacing(20)
+
+        # Creiamo un layout orizzontale per la prima riga (3 card)
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(20)
+        row1_layout.setAlignment(Qt.AlignmentFlag.AlignCenter) # Centra le card nella riga!
+
+        # Creiamo un layout orizzontale per la seconda riga (2 card)
+        row2_layout = QHBoxLayout()
+        row2_layout.setSpacing(20)
+        row2_layout.setAlignment(Qt.AlignmentFlag.AlignCenter) # Centra le card nella riga!
+
+        main_layout.addStretch(1)
+
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1)    # Molla invisibile a SINISTRA
+        h_layout.addLayout(cards_v_layout)  # Il nostro nuovo contenitore verticale
+        h_layout.addStretch(1)    # Molla invisibile a DESTRA
+        
+        main_layout.addLayout(h_layout)
+        main_layout.addStretch(1)
+
+        # Definizione delle 5 sezioni
+        sections = [
+            ("Modello 3D (Android)", "Genera modelli tattili ottimizzati per tablet.", os.path.join(config.ASSET_DIR, "android_icon.png"), self.open_android_model),
+            ("Modello 3D (Circuito)", "Crea modelli tattili pronti alla stampa.", os.path.join(config.ASSET_DIR, "circuit_icon.png"), self.open_circuit_model),
+            ("Bassorilievo Semplice", "Crea modelli tattili base pronti alla stampa, senza interattività.", os.path.join(config.ASSET_DIR, "basrelief_icon.png"), self.open_basic_model),
+            ("Lettura Sensore", "Avvia la lettura interattiva da circuito con feedback vocale.", os.path.join(config.ASSET_DIR, "reader_icon.png"), self.open_reader),
+            ("Calibrazione", "Associa i nodi fisici alle impronte del sensore.", os.path.join(config.ASSET_DIR, "calibration_icon.png"), self.open_calibration)
+        ]
+
+        # Posizionamento: Le prime 3 nella riga 1, le restanti nella riga 2
+        for i, (title, desc, icon_path, callback) in enumerate(sections):
             card = NavCard(title, desc, icon_path, callback)
-            grid.addWidget(card, i // 2, i % 2, alignment=Qt.AlignmentFlag.AlignCenter)
+            if i < 3:
+                row1_layout.addWidget(card)
+            else:
+                row2_layout.addWidget(card)
+                
+        #aggiungiamo le due righe complete al contenitore verticale
+        cards_v_layout.addLayout(row1_layout)
+        cards_v_layout.addLayout(row2_layout)
 
         # Applicazione di uno stile moderno tramite QSS
         self.setStyleSheet("""
@@ -109,9 +150,14 @@ class HaptyHub(QMainWindow):
         self.android_win.show()
 
     def open_circuit_model(self):
-        from src.ui.basic_haptic_modeler import LandingWindow # La rinomineremo poi
-        self.circuit_win = LandingWindow()
+        from src.ui.circuit_model_window import CircuitModelWindow # NUOVA FINESTRA
+        self.circuit_win = CircuitModelWindow()
         self.circuit_win.show()
+
+    def open_basic_model(self):
+        from src.ui.basic_haptic_modeler import LandingWindow # LA TUA VECCHIA FINESTRA
+        self.basic_win = LandingWindow()
+        self.basic_win.show()
 
     def open_reader(self):
         from src.ui.hapticReader_window import HapticReaderWindow
