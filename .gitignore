@@ -5,7 +5,7 @@ doc/
 node_modules/
 temp/
 *.json
-!src/nodes_frequency.json
+!src/utils/nodes_frequency.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

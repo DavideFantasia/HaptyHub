@@ -1,0 +1,27 @@
+[
+    {
+        "node": 1,
+        "turns": 41,
+        "Mhz": 24
+    },
+    {
+        "node": 2,
+        "turns": 62,
+        "Mhz": 16
+    },
+    {
+        "node": 3,
+        "turns": 36,
+        "Mhz": 27
+    },
+    {
+        "node": 4,
+        "turns": 48,
+        "Mhz": 20.5
+    },
+    {
+        "node": 5,
+        "turns": 27,
+        "Mhz": 36
+    }
+]
