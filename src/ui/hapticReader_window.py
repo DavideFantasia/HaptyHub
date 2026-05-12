@@ -1,4 +1,3 @@
-import math
 import numpy as np
 
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -33,7 +32,6 @@ class HapticReaderWindow(QMainWindow):
         
         # --- DEBOUNCING ---
         self.no_touch_frames = 0 # Contatore per evitare "rimbalzi" quando togli il dito
-
         self._setup_ui()
         self._init_menu_bar()
 
