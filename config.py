@@ -48,5 +48,7 @@ DEVICES_FILE = os.path.join(BASE_DIR, "devices.json")
 ACTIVE_DEVICE = None # Memorizza l'istanza del Device attualmente selezionato
 
 # Cartella temporanea per file intermedi (es. log, cache, ecc.)
-UTILS_DIR = os.path.join(BASE_DIR, "utils")
-os.makedirs(UTILS_DIR, exist_ok=True)
+UTILS_DIR = os.path.join(BASE_DIR,"src", "utils")
+
+TEMP_DIR = os.path.join(BASE_DIR, "temp")
+os.makedirs(TEMP_DIR, exist_ok=True)

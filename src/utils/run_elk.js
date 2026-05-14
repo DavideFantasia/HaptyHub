@@ -4,8 +4,10 @@ const path = require('path');
 
 const elk = new ELK();
 
-const inputFile = path.join(__dirname, "input_coordinates.json");
-const outputFile = path.join(__dirname, "output_coordinates.json");
+const tempDir = path.join(__dirname, '..', '..', 'temp');
+
+const inputFile = path.join(tempDir, 'input_coordinates.json');
+const outputFile = path.join(tempDir, 'output_coordinates.json');
 
 if (!inputFile || !outputFile) {
     console.error("ERROR: Missing arguments! Usage: node run_elk.js <batch_in.json> <batch_out.json>");

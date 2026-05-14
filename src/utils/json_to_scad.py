@@ -134,7 +134,7 @@ def generate_scad(json_filepath, base_scad_filepath):
     # OPENSCAD TEMPLATE 
     scad = f"""// --- GLOBAL SETTINGS & CONSTANTS ---
 
-use <{os.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
+use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
 $fn = 64;
 base_width = {screen_width};
 base_height = {screen_height};

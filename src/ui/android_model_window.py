@@ -407,6 +407,11 @@ class AndroidModelWindow(QMainWindow):
             # ------------------------------------------------
             
             # Esegue ELK (Javascript)
+            os.makedirs(config.TEMP_DIR, exist_ok=True)
+            input_path = os.path.join(config.TEMP_DIR, "input_coordinates.json")
+            with open(input_path, "w") as f:
+                json.dump(graph_data, f)
+
             cmd = ["node", "src/utils/run_elk.js"]
             subprocess.run(cmd, text=True, check=True)
 
@@ -418,7 +423,7 @@ class AndroidModelWindow(QMainWindow):
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
             
-            generate_scad(os.join(config.UTILS_DIR, "output_coordinates.json"), scad_output)
+            generate_scad(os.path.join(config.TEMP_DIR, "output_coordinates.json"), scad_output)
             
             self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
 
@@ -525,8 +530,21 @@ class AndroidModelWindow(QMainWindow):
 
     def _cleanup_worker(self):
         if hasattr(self, 'worker') and self.worker is not None:
-            self.worker.deleteLater()
-            self.worker = None
+            try:
+                # 1. Diciamo al thread di fermare il suo event loop (se ne ha uno)
+                self.worker.quit()
+                
+                # 2. BLOCCO FONDAMENTALE: blocca l'esecuzione per qualche millisecondo 
+                # finché il thread C++ sottostante non è VERAMENTE e completamente terminato.
+                self.worker.wait() 
+                
+                # 3. Ora che è un "cadavere" sicuro, diciamo a PyQt di smaltirlo
+                self.worker.deleteLater()
+                
+                # 4. Rimuoviamo il riferimento Python per liberare la memoria
+                self.worker = None
+            except Exception as e:
+                print(f"Errore ignorato durante la pulizia del thread: {e}")
 
     def closeEvent(self, event):
         print("Chiusura finestra: avvio procedura di scaricamento GPU...")
