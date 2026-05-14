@@ -2,26 +2,31 @@
 echo ===========================================
 echo  Installazione di HaptyHub 
 echo ===========================================
-
-@echo off
-echo ==========================================
 echo Controllo dipendenze di sistema in corso...
 echo ==========================================
 
-:: Controllo Node.js
+:: --- Controllo Node.js ---
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [!] Node.js non e' installato. Tentativo di installazione automatica...
-    winget install -e --id OpenJS.NodeJS --accept-source-agreements --accept-package-agreements
-    if %errorlevel% neq 0 (
-        echo.
-        echo [ERRORE CRITICO] Installazione di Node.js fallita. 
-        echo Per favore scarica e installa Node.js manualmente da: https://nodejs.org/
-        pause
-        exit /b
+    :: Se non e' nel PATH, cerchiamo nella cartella standard di installazione
+    if exist "C:\Program Files\nodejs\node.exe" (
+        echo [OK] Node.js trovato in C:\Program Files ma non nel PATH. Uso percorso assoluto.
+        set "PATH=%PATH%;C:\Program Files\nodejs"
+    ) else (
+        echo [!] Node.js non e' installato. Tentativo di installazione automatica via winget...
+        winget install -e --id OpenJS.NodeJS --accept-source-agreements --accept-package-agreements
+        if %errorlevel% neq 0 (
+            echo.
+            echo [ERRORE CRITICO] Installazione di Node.js fallita. 
+            echo Scarica e installa Node.js manualmente da: https://nodejs.org/
+            pause
+            exit /b
+        )
+        :: Aggiungiamo Node al PATH temporaneo della finestra corrente per far funzionare NPM subito sotto
+        set "PATH=%PATH%;C:\Program Files\nodejs"
     )
 ) else (
-    echo [OK] Node.js e' gia' installato.
+    echo [OK] Node.js e' gia' installato e nel PATH.
 )
 
 echo [X] Installazione delle dipendenze Node.js...
@@ -34,20 +39,30 @@ IF EXIST "package.json" (
     call npm install elkjs
 )
 
-:: Controllo OpenSCAD
+:: --- Controllo OpenSCAD ---
 where openscad >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [!] OpenSCAD non e' installato. Tentativo di installazione automatica...
-    winget install -e --id OpenSCAD.OpenSCAD --accept-source-agreements --accept-package-agreements
-    if %errorlevel% neq 0 (
-        echo.
-        echo [ERRORE CRITICO] Installazione di OpenSCAD fallita. 
-        echo Per favore scarica e installa OpenSCAD manualmente da: https://openscad.org/downloads.html
-        pause
-        exit /b
+    if exist "C:\Program Files\OpenSCAD\openscad.exe" (
+        echo [OK] OpenSCAD trovato nella cartella standard. Lo aggiungo al PATH locale...
+        set "PATH=%PATH%;C:\Program Files\OpenSCAD"
+    ) else if exist "C:\Program Files (x86)\OpenSCAD\openscad.exe" (
+        echo [OK] OpenSCAD trovato nella cartella x86. Lo aggiungo al PATH locale...
+        set "PATH=%PATH%;C:\Program Files (x86)\OpenSCAD"
+    ) else (
+        echo [!] OpenSCAD non e' installato. Tentativo di installazione automatica...
+        winget install -e --id OpenSCAD.OpenSCAD --accept-source-agreements --accept-package-agreements
+        if %errorlevel% neq 0 (
+            echo.
+            echo [ERRORE CRITICO] Installazione di OpenSCAD fallita. 
+            echo Scarica e installa OpenSCAD manualmente da: https://openscad.org/downloads.html
+            pause
+            exit /b
+        )
+        :: Aggiorniamo il path per sicurezza
+        set "PATH=%PATH%;C:\Program Files\OpenSCAD"
     )
 ) else (
-    echo [OK] OpenSCAD e' gia' installato.
+    echo [OK] OpenSCAD e' gia' installato e configurato.
 )
 
 echo.
@@ -56,7 +71,11 @@ echo.
 
 :: Creazione dell'ambiente virtuale
 echo [1/4] Creazione dell'ambiente virtuale (venv)...
-python -m venv venv
+if not exist "venv\" (
+    python -m venv venv
+) else (
+    echo   - L'ambiente virtuale esiste gia'. Verranno aggiornate le librerie.
+)
 
 :: Installazione dipendenze
 echo [2/4] Installazione delle librerie Python...
@@ -81,7 +100,7 @@ if not exist ".env" (
     (echo GEMINI_API_KEY=) >> .env
     echo   -^> File .env creato con successo.
 ) else (
-    echo   -> File .env gia' esistente, chiavi API preservate.
+    echo   -^> File .env gia' esistente, chiavi API preservate.
 )
 
 echo ========================================
@@ -91,9 +110,10 @@ echo ========================================
 
 echo.
 echo ==============================================================
-echo INSTALLAZIONE COMPLETATA CON SUCCESSO!
-echo Nota: Se sono stati installati Node.js o OpenSCAD per la 
-echo prima volta, potrebbe essere necessario RIAVVIARE IL COMPUTER 
-echo (o chiudere e riaprire il terminale) per farglieli riconoscere.
+echo NOTA IMPORTANTE:
+echo Se Node.js o OpenSCAD sono stati installati o rilevati 
+echo per la prima volta durante questo processo, DEVI RIAVVIARE 
+echo IL COMPUTER (o disconnettere e riconnettere l'utente) 
+echo affinche' Python riesca a "vederli" correttamente.
 echo ==============================================================
 pause

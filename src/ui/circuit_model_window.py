@@ -302,8 +302,21 @@ class CircuitModelWindow(QMainWindow):
 
     def _cleanup_worker(self):
         if hasattr(self, 'worker') and self.worker is not None:
-            self.worker.deleteLater()
-            self.worker = None
+            try:
+                # 1. Diciamo al thread di fermare il suo event loop (se ne ha uno)
+                self.worker.quit()
+                
+                # 2. BLOCCO FONDAMENTALE: blocca l'esecuzione per qualche millisecondo 
+                # finché il thread C++ sottostante non è VERAMENTE e completamente terminato.
+                self.worker.wait() 
+                
+                # 3. Ora che è un "cadavere" sicuro, diciamo a PyQt di smaltirlo
+                self.worker.deleteLater()
+                
+                # 4. Rimuoviamo il riferimento Python per liberare la memoria
+                self.worker = None
+            except Exception as e:
+                print(f"Errore ignorato durante la pulizia del thread: {e}")
 
     def closeEvent(self, event):
         print("Chiusura finestra: avvio procedura di scaricamento GPU...")

@@ -1,4 +1,4 @@
-import json
+import json, os, config
 
 
 def generate_scad(json_filepath, base_scad_filepath):
@@ -134,7 +134,7 @@ def generate_scad(json_filepath, base_scad_filepath):
     # OPENSCAD TEMPLATE 
     scad = f"""// --- GLOBAL SETTINGS & CONSTANTS ---
 
-use <braille.scad>; // library for the braille text
+use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
 $fn = 64;
 base_width = {screen_width};
 base_height = {screen_height};
@@ -366,6 +366,6 @@ intersection() {{
 // RENDER FULL PREASSEMBLED BOARD
 full_mask();
 """
-    file3 = base_scad_filepath.replace('.scad', '_full.scad')
+    file3 = base_scad_filepath.replace('.scad', '.scad')
     with open(file3, 'w') as f: f.write(part3_scad)
     print(f"Successfully generated: {file3}")

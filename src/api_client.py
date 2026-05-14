@@ -21,7 +21,7 @@ class GeminiClient:
         return response.text
 
     def generate_scad(self, description: str, system_prompt: str) -> str:
-        """Fase 2: Prende la descrizione e genera il codice OpenSCAD."""
+        """[DEPRECATED] Fase 2: Prende la descrizione e genera il codice OpenSCAD."""
         
         response = self.client.models.generate_content(
             model=self.model_id,
@@ -43,7 +43,7 @@ class TestClient:
         self.client = None
 
         # Definisci il percorso del file temporaneo (rispetto a dove esegui lo script)
-        self.temp_graph_path = os.path.join(config.TEMP_DIR, "test_temp_graph.json")
+        self.temp_graph_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
     
     def analyze_image(self, image_path: str, prompt: str) -> str:
         """
