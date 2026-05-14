@@ -11,6 +11,8 @@ from src.models.graph_models import HapticGraph
 from src.utils.sensor_reader import NVAReader
 from src.utils.sensor_worker import SensorWorker
 
+import json, os, config
+
 class CalibrationWindow(QMainWindow):
     # Definizione degli Stati Semplificata (Solo 2 stati reali)
     STATE_ACQUIRING = 0
@@ -31,11 +33,26 @@ class CalibrationWindow(QMainWindow):
         self.nodi_rilevati = []
         self.nodo_corrente_index = 0
 
+        self._load_loockup_table() # Carichiamo la tabella di lookup per le descrizioni suggerite dei nodi
         self._setup_ui()
 
         self.worker = SensorWorker(self.sensor)
         self.worker.data_ready.connect(self.process_sensor_data)
         self.worker.start()
+
+    def _load_loockup_table(self):
+        # Carichiamo la tabella di lookup per le descrizioni dei nodi
+        self.lookup_table = []
+        lookup_path = os.path.join(config.BASE_DIR, "src", "utils", "nodes_frequency.json")
+        if os.path.exists(lookup_path):
+            try:
+                with open(lookup_path, "r", encoding="utf-8") as f:
+                    self.lookup_table = json.load(f)
+                print(f"Look-up table caricata: {len(self.lookup_table)} nodi noti.")
+            except Exception as e:
+                print(f"Errore nella lettura di nodes_frequency.json: {e}")
+        else:
+            print(f"Attenzione: file {lookup_path} non trovato. Autocompletamento disabilitato.")
 
     def _setup_ui(self):
         self.main_widget = QWidget()
@@ -196,14 +213,27 @@ class CalibrationWindow(QMainWindow):
         self.entry_desc.setEnabled(True)
         self.btn_salva.setEnabled(True)
         
-        # Suggerimento automatico dell'ID
-        numero_nodo = len(self.nodi_salvati) + 1
-        self.entry_node_id.setText(f"Nodo_{numero_nodo}")
-        self.entry_desc.clear()
+        # --- LOGICA DI AUTOCOMPLETAMENTO DA LOOK-UP TABLE ---
+        # Valori di default se non troviamo corrispondenze
+        suggerimento_id = f"Nodo_{len(self.nodi_salvati) + 1}"
+        suggerimento_desc = f"Descrizione Nodo {len(self.nodi_salvati) + 1}"
+
+        if self.lookup_table:
+            # Trova l'elemento nel JSON con i Mhz più vicini al valore X cliccato
+            closest_match = min(self.lookup_table, key=lambda item: abs(item.get("Mhz", 0) - indice_x))
+            
+            # Applichiamo una "tolleranza" (es. +/- 3 Mhz).
+            # Se il picco è a 23 e il JSON dice 24, lo consideriamo un match.
+            # Se il picco è a 50 e il più vicino nel JSON è 36, non suggeriamo nulla per evitare errori.
+            tolleranza = 3.0 
+            if abs(closest_match.get("Mhz", 0) - indice_x) <= tolleranza:
+                suggerimento_id = f"Nodo_{closest_match['node']}"
+                suggerimento_desc = closest_match['description']
+
+        # Popoliamo i campi con i suggerimenti trovati (o con i default)
+        self.entry_node_id.setText(suggerimento_id)
+        self.entry_desc.setText(suggerimento_desc)
         self.entry_desc.setFocus()
-        
-        # Opzionale: Cambiamo il colore del pallino cliccato per dare feedback visivo
-        # (Richiede un po' di manipolazione dei brush di PyQtGraph, ma l'hoverable fa già un buon lavoro)
 
     def prepara_form_nodo(self):
         """Aggiorna i testi e abilita i bottoni per compilare il nodo N."""
