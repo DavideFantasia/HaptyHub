@@ -322,6 +322,6 @@ intersection() {{
 // RENDER FULL PREASSEMBLED BOARD
 full_board();
 """
-    file3 = scad_filepath.replace('.scad', '_full.scad')
+    file3 = scad_filepath.replace('.scad', '.scad')
     with open(file3, 'w') as f: f.write(part3_scad)
     print(f"Successfully generated: {file3}")

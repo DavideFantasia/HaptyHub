@@ -406,13 +406,9 @@ class AndroidModelWindow(QMainWindow):
                 graph_data['tablet_actual_height'] = dev.body_height
             # ------------------------------------------------
             
-            # 2. Salva il file temporaneo
-            output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
-            json_string = json.dumps(graph_data)
-            
-            # 3. Esegue ELK (Javascript)
-            cmd = ["node", "src/utils/run_elk.js", output_path]
-            subprocess.run(cmd, input=json_string, text=True, check=True)
+            # Esegue ELK (Javascript)
+            cmd = ["node", "src/utils/run_elk.js"]
+            subprocess.run(cmd, text=True, check=True)
 
             # 4. Converte il risultato in OpenSCAD
             self.update_ui_progress("Conversione coordinate spaziali in modello 3D...")
@@ -422,7 +418,7 @@ class AndroidModelWindow(QMainWindow):
             os.makedirs(config.OUTPUT_DIR, exist_ok=True)
             scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
             
-            generate_scad(output_path, scad_output)
+            generate_scad(os.join(config.UTILS_DIR, "output_coordinates.json"), scad_output)
             
             self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
 
