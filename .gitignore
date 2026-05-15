@@ -1,3 +1,7 @@
+# File Eseguibili da Terminale
+HaptyHub.sh
+HaptyHub.bat
+
 # Output directory
 output/
 input/

@@ -13,6 +13,7 @@ import config, json, subprocess, time
 from src.utils.image_helper import load_and_scale_image
 from src.utils.gemini_worker import GeminiWorker
 from src.utils.stl_viewer import STLViewerWidget
+from src.utils.stl_compiler import STLCompilerWorker
 
 # --- Widget personalizzato per il drag and drop ---
 class ImageDropLabel(QLabel):
@@ -391,7 +392,7 @@ class AndroidModelWindow(QMainWindow):
             clean_json = raw_json.replace("```json", "").replace("```", "").strip()
             graph_data = json.loads(clean_json)
 
-            # --- NUOVO: CONTROLLO E INIEZIONE DISPOSITIVO ---
+            # --- CONTROLLO E INIEZIONE DISPOSITIVO ---
             if getattr(config, 'ACTIVE_DEVICE', None) is None:
                 self.update_ui_progress("ATTENZIONE: Nessun dispositivo selezionato. Uso valori di default.")
             else:
@@ -404,35 +405,19 @@ class AndroidModelWindow(QMainWindow):
                 graph_data['margin_right'] = dev.margin_right
                 graph_data['tablet_actual_width'] = dev.body_width
                 graph_data['tablet_actual_height'] = dev.body_height
+
             # ------------------------------------------------
             
-            # 2. Salva il file temporaneo
-            output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
-            json_string = json.dumps(graph_data)
-            
-            # 3. Esegue ELK (Javascript)
-            cmd = ["node", "src/utils/run_elk.js", output_path]
-            subprocess.run(cmd, input=json_string, text=True, check=True)
-
-            # 4. Converte il risultato in OpenSCAD
-            self.update_ui_progress("Conversione coordinate spaziali in modello 3D...")
-            from src.utils.json_to_scad import generate_scad
-            
-            # Assicurati che la cartella output esista
-            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-            scad_output = os.path.join(config.OUTPUT_DIR, "android_model.scad")
-            
-            generate_scad(output_path, scad_output)
-            
-            self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{scad_output}")
-
-            # Compilazione in stl
-            cmd = ["openscad", "-o", os.path.join(config.OUTPUT_DIR, "android_model.stl"), scad_output]
-            subprocess.run(cmd, check=True,)
-            self.viewer_3d.load_stl(os.path.join(config.OUTPUT_DIR, "android_model.stl"))
-
-            self.send_btn.setEnabled(True)
-            self._cleanup_worker()
+            # AVVIO DEL THREAD COMPILATORE
+            self.STLcompiler_worker = STLCompilerWorker(
+                graph_data=graph_data, 
+                generator_module="src.utils.json_to_scad", 
+                output_prefix="android_model"
+            )
+            self.STLcompiler_worker.progress.connect(self.update_ui_progress)
+            self.STLcompiler_worker.finished.connect(self.on_STLcompilation_finished)
+            self.STLcompiler_worker.error.connect(self.handle_generation_error)
+            self.STLcompiler_worker.start()
             
         except json.JSONDecodeError:
             self.handle_generation_error("Gemini non ha restituito un JSON valido.")
@@ -440,6 +425,14 @@ class AndroidModelWindow(QMainWindow):
             self.handle_generation_error("Errore durante l'esecuzione del motore ELK (Node.js). Assicurati che Node sia installato e funzionante.")
         except Exception as e:
             self.handle_generation_error(f"Errore nella generazione ELK: {str(e)}")
+
+    def on_STLcompilation_finished(self, stl_path):
+        """Funzione chiamata quando STLCompilerWorker ha finito di generare l'STL."""
+        self.update_ui_progress(f"COMPLETATO! Modello per Tablet salvato in:\n{stl_path}")
+        self.viewer_3d.load_stl(stl_path)
+        
+        self.send_btn.setEnabled(True)
+        self._cleanup_worker()
 
     def update_ui_progress(self, message):
         self.console_output.append(f"> {message}")
@@ -529,8 +522,21 @@ class AndroidModelWindow(QMainWindow):
 
     def _cleanup_worker(self):
         if hasattr(self, 'worker') and self.worker is not None:
-            self.worker.deleteLater()
-            self.worker = None
+            try:
+                self.worker.quit()
+                self.worker.deleteLater()
+                self.worker = None
+            except Exception as e:
+                pass
+                
+        # Pulizia STLCompilerWorker
+        if hasattr(self, 'STLcompiler_worker') and self.STLcompiler_worker is not None:
+            try:
+                self.STLcompiler_worker.quit()
+                self.STLcompiler_worker.deleteLater()
+                self.STLcompiler_worker = None
+            except Exception as e:
+                pass
 
     def closeEvent(self, event):
         print("Chiusura finestra: avvio procedura di scaricamento GPU...")

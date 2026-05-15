@@ -1,4 +1,4 @@
-import json
+import json, os, config
 
 def generate_scad(json_filepath, scad_filepath):
     # 1. LOAD & PARSE DATA
@@ -40,8 +40,6 @@ def generate_scad(json_filepath, scad_filepath):
         print("No nodes found in JSON!")
         return
 
-    #min_x, max_x = min(all_x), max(all_x)
-    #min_y, max_y = min(all_y), max(all_y)
     main_spine_x = list(nodes.values())[0]['x'] # Use the Start node as the center anchor
     max_reach_x = max([abs(x - main_spine_x) for x in all_x])
     
@@ -49,13 +47,12 @@ def generate_scad(json_filepath, scad_filepath):
     max_x = main_spine_x + max_reach_x
     
     min_y, max_y = min(all_y), max(all_y)
-    # --- PYTHON PHYSICAL MATH CALIBRATION ---
-    # We mirror the SCAD grid math here so Python can plot the exact millimeter routing
+    
     base_width = 150
     base_height = 210
     block_size = 12.6
-    margin_x = 10
-    margin_y = 10
+    margin_x = 15
+    margin_y = 15
     safe_margin_x = margin_x + (block_size / 2)
     safe_margin_y = margin_y + (block_size / 2)
 
@@ -66,12 +63,34 @@ def generate_scad(json_filepath, scad_filepath):
     
     def get_px(scad_x):
         return scad_x * grid_spacing_x + x_offset
+
+    # =========================================================================
+    # --- CALCULATE THE Y-CUT FOR SPLITTING IN 2 PARTS ---
+    node_extents = []
+    for n in nodes.values():
+        actual_y = n['y'] * grid_spacing_y + y_offset 
+        node_extents.append((actual_y - 12, actual_y + 12))
+    
+    node_extents.sort()
+
+    max_gap = 0
+    cut_y = base_height / 2.0
+    for i in range(len(node_extents) - 1):
+        gap = node_extents[i+1][0] - node_extents[i][1]
+        if gap > max_gap and gap > 5: 
+            max_gap = gap
+            cut_y = node_extents[i][1] + (gap / 2.0)
+
+    peg_edge_offset = 15.0 
+    left_peg_x = peg_edge_offset
+    right_peg_x = base_width - peg_edge_offset
+    # =========================================================================
     
     # 2. OPENSCAD TEMPLATE
     scad_header = f"""// --- GLOBAL SETTINGS ---
     
-use <braille.scad>; 
-$fn = 64;
+use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
+$fn = 32;
 base_width = {base_width};
 base_height = {base_height};
 base_thickness = 4;
@@ -119,7 +138,7 @@ module node_post(x, y) {{
         cube([post_size, post_size, post_height]);
 }}
 
-// --- NEW: UNIVERSAL POINT-TO-POINT TRENCH ---
+// --- TRENCH FOR THE WIRE ---
 module bottom_trench(x1, y1, x2, y2) {{
     start_x = min(x1, x2);
     start_y = min(y1, y2);
@@ -129,7 +148,7 @@ module bottom_trench(x1, y1, x2, y2) {{
         cube([w, h, wire_groove_depth + 0.1]);
 }}
 
-// --- TOP EDGE MODULES ---
+// --- MODULES ---
 module edge_segment(p1, p2, is_start=false, is_end=false) {{
     p1s = scale_p(p1); p2s = scale_p(p2);
     dx = p2s[0] - p1s[0]; dy = p2s[1] - p1s[1];
@@ -157,19 +176,20 @@ module edge_arrow(p1, p2) {{
 }}
 
 // --- RENDERING ---
-union() {{
-    difference() {{
-        cube([base_width, base_height, base_thickness]);
+module full_board() {{
+    union() {{
+        difference() {{
+            cube([base_width, base_height, base_thickness]);
 """
 
     scad_lines = [scad_header]
 
     for n in nodes.values():
-        scad_lines.append(f"        node_relief({n['x']}, {n['y']});")
+        scad_lines.append(f"            node_relief({n['x']}, {n['y']});")
 
     # =========================================================================
-    # --- NEW: THE MASTER ROUTING ALGORITHM ---
-    scad_lines.append("\n        // --- Continuous Snake Routing (Entry & Exit Adjacent) ---")
+    # --- TRENCH ROUTING  ---
+    scad_lines.append("\n            // --- Continuous Snake Routing (Entry & Exit Adjacent) ---")
     
     unique_x_coords = sorted(list(set(round(get_px(n['x']), 2) for n in nodes.values())))
     N = len(unique_x_coords)
@@ -177,63 +197,131 @@ union() {{
     wire_margin = 8
     top_y = base_height - wire_margin
     bot_y = wire_margin
-    ret_y = 3   # The dedicated horizontal return path (safe below the node holes)
-    exit_y = -1 # Exits the physical plastic entirely
+    ret_y = 3   
+    exit_y = -1 
     
-    # 1. ENTRY POINT (Column 0 goes from bottom edge to top margin)
-    scad_lines.append(f"        bottom_trench({unique_x_coords[0]}, {exit_y}, {unique_x_coords[0]}, {top_y}); // Entry")
+    # ENTRY POINT (Column 0 goes from bottom edge to top margin)
+    scad_lines.append(f"            bottom_trench({unique_x_coords[0]}, {exit_y}, {unique_x_coords[0]}, {top_y}); // Entry")
     
-    # 2. SNAKE ROUTING
+    # ROUTING
     for i in range(N - 1):
         if i % 2 == 0:
             # At Top: Route Right, then Down
-            scad_lines.append(f"        bottom_trench({unique_x_coords[i]}, {top_y}, {unique_x_coords[i+1]}, {top_y});")
-            scad_lines.append(f"        bottom_trench({unique_x_coords[i+1]}, {top_y}, {unique_x_coords[i+1]}, {bot_y});")
+            scad_lines.append(f"            bottom_trench({unique_x_coords[i]}, {top_y}, {unique_x_coords[i+1]}, {top_y});")
+            scad_lines.append(f"            bottom_trench({unique_x_coords[i+1]}, {top_y}, {unique_x_coords[i+1]}, {bot_y});")
         else:
             # At Bottom: Route Right, then Up
-            scad_lines.append(f"        bottom_trench({unique_x_coords[i]}, {bot_y}, {unique_x_coords[i+1]}, {bot_y});")
-            scad_lines.append(f"        bottom_trench({unique_x_coords[i+1]}, {bot_y}, {unique_x_coords[i+1]}, {top_y});")
+            scad_lines.append(f"            bottom_trench({unique_x_coords[i]}, {bot_y}, {unique_x_coords[i+1]}, {bot_y});")
+            scad_lines.append(f"            bottom_trench({unique_x_coords[i+1]}, {bot_y}, {unique_x_coords[i+1]}, {top_y});")
             
-    # 3. END-OF-LINE & RETURN PREPARATION
+    # END-OF-LINE & RETURN
     if N % 2 == 1:
         # Ended at TOP. Create a dummy drop column 9mm to the right of the last column.
         px_dummy = round(unique_x_coords[-1] + 9, 2)
-        scad_lines.append(f"        bottom_trench({unique_x_coords[-1]}, {top_y}, {px_dummy}, {top_y}); // Top connector to dummy")
-        scad_lines.append(f"        bottom_trench({px_dummy}, {top_y}, {px_dummy}, {ret_y}); // Dummy Drop Column")
+        scad_lines.append(f"            bottom_trench({unique_x_coords[-1]}, {top_y}, {px_dummy}, {top_y}); // Top connector to dummy")
+        scad_lines.append(f"            bottom_trench({px_dummy}, {top_y}, {px_dummy}, {ret_y}); // Dummy Drop Column")
         current_x = px_dummy
     else:
         # Ended at BOTTOM. Just extend the current column down a bit further to the return path level.
-        scad_lines.append(f"        bottom_trench({unique_x_coords[-1]}, {bot_y}, {unique_x_coords[-1]}, {ret_y}); // Drop to return path")
+        scad_lines.append(f"            bottom_trench({unique_x_coords[-1]}, {bot_y}, {unique_x_coords[-1]}, {ret_y}); // Drop to return path")
         current_x = unique_x_coords[-1]
         
     # 4. HORIZONTAL RETURN & EXIT
     px_exit = round(unique_x_coords[0] + 9, 2) # Exit point is exactly 9mm to the right of Entry
-    scad_lines.append(f"        bottom_trench({current_x}, {ret_y}, {px_exit}, {ret_y}); // Horizontal Return Path")
-    scad_lines.append(f"        bottom_trench({px_exit}, {ret_y}, {px_exit}, {exit_y}); // Exit Point")
+    scad_lines.append(f"            bottom_trench({current_x}, {ret_y}, {px_exit}, {ret_y}); // Horizontal Return Path")
+    scad_lines.append(f"            bottom_trench({px_exit}, {ret_y}, {px_exit}, {exit_y}); // Exit Point")
     # =========================================================================
 
-    scad_lines.append("    } // End difference\n")
+    scad_lines.append("        } // End difference\n")
 
     for n in nodes.values():
-        scad_lines.append(f"    node_post({n['x']}, {n['y']});")
+        scad_lines.append(f"        node_post({n['x']}, {n['y']});")
 
     for e in edges:
         pts = e['points']
         for i in range(len(pts) - 1):
             is_start = "true" if i == 0 else "false"
             is_end = "true" if i == len(pts) - 2 else "false"
-            scad_lines.append(f"    edge_segment({pts[i]}, {pts[i+1]}, {is_start}, {is_end});")
+            scad_lines.append(f"        edge_segment({pts[i]}, {pts[i+1]}, {is_start}, {is_end});")
             if i > 0: 
-                scad_lines.append(f"    edge_elbow({pts[i]});")
-        scad_lines.append(f"    edge_arrow({pts[-2]}, {pts[-1]});")
+                scad_lines.append(f"        edge_elbow({pts[i]});")
+        scad_lines.append(f"        edge_arrow({pts[-2]}, {pts[-1]});")
 
-    scad_lines.append("\n    // --- TACTILE TITLE ---")
-    scad_lines.append("    translate([5, base_height - 10, base_thickness])")     
-    scad_lines.append(f"        braille(\"{board_title}\");")
+    scad_lines.append("\n        // --- TACTILE TITLE ---")
+    scad_lines.append("        translate([5, base_height - 10, base_thickness])")     
+    scad_lines.append(f"            braille(\"{board_title}\");")
 
-    scad_lines.append("}") 
+    scad_lines.append("    }") # Close union
+    scad_lines.append("}")     # Close full_board module
 
-    with open(scad_filepath, 'w') as f:
-        f.write("\n".join(scad_lines))
+    scad_lines.append("""
+// --- SPLITTER LOGIC ---
+module puzzle_tab_shape(inflate=0) {
+    offset(delta=inflate) {
+        polygon([
+            [-4, -0.1], // Bottom Left 
+            [ 4, -0.1], // Bottom Right
+            [ 7,  6.0], // Top Right 
+            [-7,  6.0]  // Top Left
+        ]);
+    }
+}
+""")
+
+    core_scad = "\n".join(scad_lines)
+
+    # -------------------------------------------------------------------------
+    # Bottom Part
+    part1_scad = core_scad + f"""
+// RENDER PART 1 (BOTTOM)
+intersection() {{
+    full_board();
+    translate([0, 0, -10]) linear_extrude(50) {{
+        union() {{
+            // Keep everything below the cut line
+            translate([-500, -500]) square([1000, 500 + {cut_y}]);
+            
+            // Add two puzzle pegs anchored to the outer edges
+            translate([{left_peg_x}, {cut_y}]) puzzle_tab_shape(0);
+            translate([{right_peg_x}, {cut_y}]) puzzle_tab_shape(0);
+        }}
+    }}
+}}
+"""
+    file1 = scad_filepath.replace('.scad', '_lower.scad')
+    with open(file1, 'w') as f: f.write(part1_scad)
+    print(f"Successfully generated: {file1}")
+
+    # -------------------------------------------------------------------------
+    # Top Part
     
-    print(f"Successfully generated: {scad_filepath}")
+    part2_scad = core_scad + f"""
+// RENDER PART 2 (TOP)
+intersection() {{
+    full_board();
+    translate([0, 0, -10]) linear_extrude(50) {{
+        difference() {{
+            // Keep everything above the cut line
+            translate([-500, {cut_y}]) square([1000, 500]);
+            
+            // Subtract the holes anchored to the outer edges
+            translate([{left_peg_x}, {cut_y}]) puzzle_tab_shape(0.2);
+            translate([{right_peg_x}, {cut_y}]) puzzle_tab_shape(0.2);
+        }}
+    }}
+}}
+"""
+    file2 = scad_filepath.replace('.scad', '_upper.scad')
+    with open(file2, 'w') as f: f.write(part2_scad)
+    print(f"Successfully generated: {file2}")
+
+    # -------------------------------------------------------------------------
+    # Full Board
+
+    part3_scad = core_scad + """
+// RENDER FULL PREASSEMBLED BOARD
+full_board();
+"""
+    file3 = scad_filepath.replace('.scad', '.scad')
+    with open(file3, 'w') as f: f.write(part3_scad)
+    print(f"Successfully generated: {file3}")

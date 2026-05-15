@@ -44,7 +44,14 @@ class NavCard(QFrame):
         layout.addWidget(desc_label)
 
         # Rendere la card cliccabile
-        self.mouseReleaseEvent = lambda e: callback()
+        self.callback = callback
+
+    # Sovrascriviamo l'evento del mouse per disabilitare la card e passare l'istanza
+    def mouseReleaseEvent(self, event):
+        # Eseguiamo solo se cliccato col tasto sinistro e se la card è attualmente abilitata
+        if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():
+            self.setEnabled(False) # Disabilita all'istante per evitare doppi-click veloci
+            self.callback(self)    # Passa l'istanza della card alla funzione ricevente
 
 class HaptyHub(QMainWindow):
     def __init__(self):
@@ -130,7 +137,7 @@ class HaptyHub(QMainWindow):
         cards_v_layout.addLayout(row1_layout)
         cards_v_layout.addLayout(row2_layout)
 
-        # Applicazione di uno stile moderno tramite QSS
+        # Stile per le card
         self.setStyleSheet("""
             #navCard {
                 background-color: #ffffff;
@@ -141,30 +148,44 @@ class HaptyHub(QMainWindow):
                 background-color: #f8f9fa;
                 border: 2px solid #3498db;
             }
+            /* STILE PER QUANDO LA CARD È DISABILITATA */
+            #navCard:disabled {
+                background-color: #f0f0f0;
+                border: 2px solid #cccccc;
+            }
+            #navCard:disabled QLabel {
+                color: #aaaaaa;
+            }
         """)
 
     # --- Metodi per aprire le finestre ---
-    def open_android_model(self):
+    def open_android_model(self, card):
         from src.ui.android_model_window import AndroidModelWindow
         self.android_win = AndroidModelWindow()
+        # Quando la finestra muore (viene chiusa), riabilita la card!
+        self.android_win.destroyed.connect(lambda x: card.setEnabled(True))
         self.android_win.show()
 
-    def open_circuit_model(self):
-        from src.ui.circuit_model_window import CircuitModelWindow # NUOVA FINESTRA
+    def open_circuit_model(self, card):
+        from src.ui.circuit_model_window import CircuitModelWindow
         self.circuit_win = CircuitModelWindow()
+        self.circuit_win.destroyed.connect(lambda x: card.setEnabled(True))
         self.circuit_win.show()
 
-    def open_basic_model(self):
-        from src.ui.basic_haptic_modeler import LandingWindow # LA TUA VECCHIA FINESTRA
+    def open_basic_model(self, card):
+        from src.ui.basic_haptic_modeler import LandingWindow 
         self.basic_win = LandingWindow()
+        self.basic_win.destroyed.connect(lambda x: card.setEnabled(True))
         self.basic_win.show()
 
-    def open_reader(self):
+    def open_reader(self, card):
         from src.ui.hapticReader_window import HapticReaderWindow
         self.read_win = HapticReaderWindow()
+        self.read_win.destroyed.connect(lambda x: card.setEnabled(True))
         self.read_win.show()
 
-    def open_calibration(self):
+    def open_calibration(self, card):
         from src.ui.calibration_window import CalibrationWindow
         self.calib_win = CalibrationWindow()
+        self.calib_win.destroyed.connect(lambda x: card.setEnabled(True))
         self.calib_win.show()

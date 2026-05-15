@@ -77,6 +77,15 @@ EOF
 
 chmod +x "$DESKTOP_FILE"
 
+# Creazione file eseguibile per terminale
+cat <<EOF > "HaptyHub.sh"
+#!/bin/bash
+source venv/bin/activate
+python main.py
+deactivate
+EOF
+chmod +x "HaptyHub.sh"
+
 # 5. Creazione file delle Variabili d'Ambiente (.env)
 echo "[5/5] Creazione del file di configurazione (.env)..."
 if [ ! -f ".env" ]; then
