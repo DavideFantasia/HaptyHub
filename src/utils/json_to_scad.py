@@ -88,6 +88,7 @@ def generate_scad(json_filepath, base_scad_filepath):
     min_y, max_y = min(all_y), max(all_y)
 
     # --- NEW: FORCE SPINE CENTERING ---
+    #TODO RIGHT NOW THIS CAUSES ISSUES WITH THE SCALING OF THE FLOWCHART
     # Find the Start node's X coordinate
     main_spine_x = list(nodes.values())[0]['x']
     
