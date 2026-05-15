@@ -206,42 +206,37 @@ class CircuitModelWindow(QMainWindow):
 
     def process_elk_pipeline(self, raw_json):
         try:
-            self.update_ui_progress("Avvio motore grafico ELK (Node.js)...")
+            self.update_ui_progress("Dati ricevuti da Gemini. Preparazione modello Circuito...")
             clean_json = raw_json.replace("```json", "").replace("```", "").strip()
             graph_data = json.loads(clean_json)
 
-            # Iniezione sicura via stdin, niente file input_path
-            output_path = os.path.join(config.TEMP_DIR, "output_coordinates.json")
-            json_string = json.dumps(graph_data)
+            # (ATTENZIONE: Assicurati di importare CompilerWorker in cima al file!)
+            from src.utils.stl_compiler import STLCompilerWorker # Adatta il nome del file se diverso
 
-            cmd = ["node", "src/utils/run_elk.js", output_path]
-            subprocess.run(cmd, input=json_string, text=True, check=True, capture_output=True)
-
-            self.update_ui_progress("Conversione in modello 3D per NanoVNA...")
+            # Istanzia il worker passandogli il generatore NanoVNA e il prefisso "circuit_model"
+            self.STLcompiler_worker = STLCompilerWorker(
+                graph_data=graph_data, 
+                generator_module="src.utils.json_to_scad_NanoVNA", 
+                output_prefix="circuit_model"
+            )
+            self.STLcompiler_worker.progress.connect(self.update_ui_progress)
+            self.STLcompiler_worker.finished.connect(self.on_STLcompilation_finished)
+            self.STLcompiler_worker.error.connect(self.handle_generation_error)
+            self.STLcompiler_worker.start()
             
-            # --- CHIAMATA ALLA FUNZIONE DEL NANOVNA ---
-            from src.utils.json_to_scad_NanoVNA import generate_scad
-            
-            os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-            scad_output = os.path.join(config.OUTPUT_DIR, "circuit_model.scad")
-            
-            generate_scad(output_path, scad_output)
-            
-            self.update_ui_progress(f"COMPLETATO! Modello Circuito salvato in:\n{scad_output}")
-
-            # Compilazione STL
-            cmd = ["openscad", "-o", os.path.join(config.OUTPUT_DIR, "circuit_model.stl"), scad_output]
-            subprocess.run(cmd, check=True)
-            
-            self.viewer_3d.load_stl(os.path.join(config.OUTPUT_DIR, "circuit_model.stl"))
-            
-            self.send_btn.setEnabled(True)
-            self._cleanup_worker()
-            
-        except subprocess.CalledProcessError as e:
-            self.handle_generation_error(f"Errore in Node.js o OpenSCAD:\n{e.stderr}")
+        except json.JSONDecodeError:
+            self.handle_generation_error("Gemini non ha restituito un JSON valido.")
         except Exception as e:
             self.handle_generation_error(f"Errore nella generazione: {str(e)}")
+
+    # -- Aggiungi questo metodo ricevitore --
+    def on_STLcompilation_finished(self, stl_path):
+        """Funzione chiamata quando STLCompilerWorker ha finito di generare l'STL."""
+        self.update_ui_progress(f"COMPLETATO! Modello Circuito salvato in:\n{stl_path}")
+        self.viewer_3d.load_stl(stl_path)
+        
+        self.send_btn.setEnabled(True)
+        self._cleanup_worker()
 
     def update_ui_progress(self, message):
         self.console_output.append(f"> {message}")
@@ -303,18 +298,20 @@ class CircuitModelWindow(QMainWindow):
     def _cleanup_worker(self):
         if hasattr(self, 'worker') and self.worker is not None:
             try:
-                # 1. Diciamo al thread di fermare il suo event loop (se ne ha uno)
                 self.worker.quit()
-                
-                #self.worker.wait() 
-                
-                # 3. Ora che è un "cadavere" sicuro, diciamo a PyQt di smaltirlo
                 self.worker.deleteLater()
-                
-                # 4. Rimuoviamo il riferimento Python per liberare la memoria
                 self.worker = None
             except Exception as e:
-                print(f"Errore ignorato durante la pulizia del thread: {e}")
+                pass
+                
+        # Pulizia STLCompilerWorker
+        if hasattr(self, 'STLcompiler_worker') and self.STLcompiler_worker is not None:
+            try:
+                self.STLcompiler_worker.quit()
+                self.STLcompiler_worker.deleteLater()
+                self.STLcompiler_worker = None
+            except Exception as e:
+                pass
 
     def closeEvent(self, event):
         print("Chiusura finestra: avvio procedura di scaricamento GPU...")
