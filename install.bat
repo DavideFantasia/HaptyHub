@@ -103,6 +103,15 @@ if not exist ".env" (
     echo   -^> File .env gia' esistente, chiavi API preservate.
 )
 
+:: Crezione del file eseguibile per terminale
+echo [5/5] Creazione del file eseguibile per terminale...
+if not exist "HaptyHub.bat" (
+    (echo @echo off) > HaptyHub.bat
+    (echo source venv\Scripts\activate.bat) >> HaptyHub.bat
+    (echo python main.py) >> HaptyHub.bat
+    (echo call venv\Scripts\deactivate.bat) >> HaptyHub.bat
+)
+
 echo ========================================
 echo  Installazione Completata! 
 echo  Troverai l'icona 'HaptyHub' sul tuo Desktop.
