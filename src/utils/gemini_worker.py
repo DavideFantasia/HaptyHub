@@ -51,6 +51,8 @@ class GeminiWorker(QThread):
                         # Segnaliamo la fine passando direttamente il JSON testuale
                         self.progress.emit("Fase 1 completata. JSON estratto.")
                         self.finished.emit(risultato_fase_1)
+                    return
+                
                 except Exception as e:
                     error_msg = str(e)
                     
