@@ -1,5 +1,5 @@
 # HaptyHub
-HaptyHub è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM e Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
+HaptyHub è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM $\times$ Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
 Oltre alla generazione del modello 3D, il software si interfaccia con hardware esterno per **rendere i modelli 3D interattivi**: toccando i nodi del modello stampato, l'applicazione riconosce il tocco e legge ad alta voce la descrizione del nodo tramite sintesi vocale (Text-to-Speech).
 
 L'obiettivo principale è favorire l'accessibilità allo studio per studenti ciechi o ipovedenti (Low Vision), permettendo la stampa 3D rapida di materiale didattico e l'esplorazione aptica interattiva.
@@ -15,10 +15,16 @@ git clone git@github.com:DavideFantasia/HaptyHub.git
 cd HaptyHub
 ```
 
+Oppure installare il progetto in formato `.zip` e decomprimerlo.
+
 ## 2. Eseguire l'installazione automatica
 
 ### Su Windows:
 Fai doppio clic sul file `install.bat` oppure eseguilo da terminale. Lo script configurerà l'ambiente e creerà un collegamento sul Desktop.
+- In caso di lamentele da parte di Windows, fare tasto destro sul file ed _eseguire come amministratore_
+
+#### Avvio
+Per avviare l'eseguibile si può lanciare il file `HaptyHub.bat` o direttamente ricercando l'applicazione fra quelle disponibili, anche tramite collegamento sul Desktop.
 
 ### Su Linux/macOS:
 Apri il terminale ed esegui lo script bash (ti verrà chiesta la password per configurare le regole `udev` necessarie alla lettura della porta USB):
@@ -27,8 +33,11 @@ Apri il terminale ed esegui lo script bash (ti verrà chiesta la password per co
 chmod +x install.sh
 ./install.sh
 ```
+#### Avvio
+Per avviare l'eseguibile si può lanciare il file `HaptyHub.sh` o direttamente ricercando l'applicazione fra quelle disponibili.
+
 ### 3. Configurazione API Key
-Il progetto utilizza le API di Google Gemini. Dopo l'installazione, verrà generato un file denominato `.env` nella cartella principale.
+Il Software utilizza le API di Google Gemini. Dopo l'installazione, verrà generato un file denominato `.env` nella cartella principale.
 Puoi inserire la tua chiave in due modi:
 1. Avviando il programma e andando nel menu in alto: `Opzioni -> API Key`.
 2. Aprendo il file `.env` con un editor di testo e incollando la chiave: `GEMINI_API_KEY=la_tua_chiave`
@@ -43,26 +52,27 @@ Il software è diviso in tre flussi di lavoro principali, accessibili dalla UI:
 ## Creazione di file SCAD da foto
 Questa funzione traduce un'immagine 2D in codice 3D.
 
-1. Avvia l'applicazione (doppio clic sull'icona creata sul Desktop).
-2. Trascina un'immagine (es. Flow Chart, Grafo) nell'area di **PREVIEW IMG** a sinistra, oppure cliccaci sopra per selezionare un file.
-3. Seleziona il tipo di diagramma dal menu Template in alto (es. _Direct Graph_, _Flow Chart_).
-4. Compila i parametri richiesti nel pannello di destra (Numero di Nodi, Archi, ecc.).
-5. Clicca sul pulsante Invia. L'IA elaborerà l'immagine in due fasi e salverà automaticamente il file generato nella cartella `output/`.
+**1.** Avvia l'applicazione (doppio clic sull'icona creata sul Desktop o sull'eseguibile creato nella cartella di lavoro).
+**2.** Selezionare la Funzione Desiderata<br>
+  **a.** Se si vuole creare un modello 3D: trascina un'immagine (es. Flow Chart, Grafo) nell'area di **PREVIEW IMG** a sinistra, oppure cliccaci sopra per selezionare un file.<br>
+  **b.** Seleziona il tipo di diagramma dal **menu Template** in alto (es. _Direct Graph_, _Flow Chart_).<br>
+  **c.** Compila i parametri richiesti in base all'operazione, come per esempio `Opzioni->Aggiungi Device/Carica Device` per la generazione di Overlay Tablet; o `File->importa Grafo` in lettura di un grafo aptico<br>
+**6.** Se si vuole generare un modello 3D, basterà cliccare sul pulsante Invia in basso a destra. L'IA elaborerà l'immagine e salverà automaticamente il file generato nella cartella `output/`, visualizzando a fine processo il modello 3D nel visualizzatore 3D a lato.
 
 ## Calibrazione e Associazione (Grafi Aptici)
 Questa funzione serve per "insegnare" al software a riconoscere i tocchi sul modello stampato in 3D, salvando le frequenze di risonanza.
 
 1. Collega la scheda hardware sensore (es. _NanoVNA_) via USB.
-2. Vai nel menu **Tattile -> Calibrazione Sensore**.
+2. Vai nel menu **Tattile -> Calibrazione Sensore** o seleziona la funzione omonima nella pagina iniziale.
 3. Il software stabilirà una linea di base ambientale (**non toccare il sensore** in questa fase).
 4. Segui le istruzioni a schermo: **tocca fisicamente un nodo** sul modello 3D e tieni premuto.
-5. Quando il software rileva e stabilizza il picco, rilascia e compila l'ID e la Descrizione del nodo.
+5. Quando il software rileva e stabilizza il picco, rilascia e compila l'ID e la Descrizione del nodo relativo al Picco di cui noti il maggior cambio.
 6. Ripeti per tutti i nodi. Al termine, clicca su **Termina ed Esporta** per salvare l'intera mappa tattile in un file `.json`.
 
 ## Lettura Interattiva del Grafo Aptico
 Questa è la modalità di utilizzo per l'utente finale. Permette l'esplorazione del modello 3D stampato con feedback vocale.
 
-1. Vai nel menu **Tattile -> Lettura Grafo Tattile**.
+1. Vai nel menu **Tattile -> Lettura Grafo Tattile** o seleziona la funzione omonima nella pagina iniziale.
 2. Dal menu della nuova finestra, fai clic su **File -> Importa Grafo (JSON)** e seleziona il file di calibrazione creato precedentemente.
 3. Il software calcolerà una _nuova linea_ di base (per adattarsi alle condizioni ambientali attuali).
 4. Tocca un nodo qualsiasi sul modello fisico: il software calcolerà in tempo reale l'Errore Quadratico Medio (MSE) delle frequenze, individuerà il nodo corrispondente e lo leggerà ad alta voce usando la sintesi vocale nativa (Windows SAPI5 o Linux espeak/mbrola).
@@ -73,38 +83,35 @@ Questa è la modalità di utilizzo per l'utente finale. Permette l'esplorazione 
 Il progetto è costruito per essere modulare, reattivo ed estensibile.
 
 ## Struttura del Progetto
-```text
-HaptyHub/
-├── .env                    # (Da creare) Contiene le chiavi API (es. GEMINI_API_KEY)
-├── config.py               # Variabili globali, path e toggle DEBUG_MODE
-├── install.bat             # Script di installazione automatica per Windows
-├── install.sh              # Script di installazione automatica per Linux/macOS
-├── main.py                 # Entry-point dell'applicazione PyQt6
-├── requirements.txt        # Elenco delle dipendenze Python del progetto
-├── src/                    # Codice sorgente principale
-│   ├── api_client.py       # Gestione delle chiamate a Gemini (Client reale e TestClient)
-│   ├── models/
-│   │   └── graph_models.py # Classi dati (Node, HapticGraph) e logica di salvataggio/caricamento JSON
-│   ├── prompts/            # Logica e testi per i prompt inviati all'IA
-│   │   ├── templates.py    # Classi base e implementazioni dei vari template per diagrammi
-│   │   ├── DirectGraph/    # Prompt (Fase 1 e 2) per grafi diretti
-│   │   ├── FlowChart/      # Prompt (Fase 1 e 2) per diagrammi di flusso
-│   │   ├── Set/            # Prompt (Fase 1 e 2) per la teoria degli insiemi
-│   │   └── UndirectGraph/  # Prompt (Fase 1 e 2) per grafi indiretti
-│   ├── ui/                 # Componenti dell'interfaccia utente (PyQt6)
-│   │   ├── calibration_window.py  # Finestra per calibrare e associare i nodi al sensore
-│   │   ├── hapticReader_window.py # Finestra per la lettura live del grafo tattile con feedback vocale
-│   │   ├── landing_window.py      # Finestra principale (Drag&Drop immagine, opzioni e log)
-│   │   └── panels.py              # Pannelli dinamici (Form) per i parametri specifici dei template
-│   └── utils/              # Script di supporto e integrazione hardware/software
-│       ├── image_helper.py # Utility OpenCV/PyQt per caricamento e ridimensionamento immagini
-│       ├── json_to_scad.py # Generatore OpenSCAD a partire dai layout JSON (usato con ELK)
-│       ├── run_elk.js      # Script Node.js per il calcolo dei layout tramite ELK engine
-│       ├── sensor_reader.py# Classe per la comunicazione Seriale/USB con la scheda (es. NanoVNA)
-│       ├── sensor_worker.py# QThread per la lettura continua dei dati hardware senza bloccare la UI
-│       └── tts_worker.py   # QThread per la sintesi vocale (Text-to-Speech) asincrona e multipiattaforma
-├── uninstall.bat           # Script per rimuovere l'ambiente virtuale e i collegamenti su Windows
-└── uninstall.sh            # Script per rimuovere l'ambiente, i collegamenti e le regole udev su Linux
+```textHaptyHub/
+├── assets/                     # Icone e risorse grafiche dell'applicazione
+├── src/                        # Codice sorgente principale
+│   ├── api_client.py           # Gestione della comunicazione con l'API di Gemini
+│   ├── models/                 # Strutture dati (es. rappresentazione di Grafo e Nodi)
+│   ├── prompts/                # Template dei prompt per l'LLM divisi per tipologia
+│   │   ├── basic/              # Prompt per modelli 3D base (Flowchart, Grafi, Insiemi)
+│   │   └── interactive/        # Prompt per modelli interattivi avanzati
+│   ├── ui/                     # Componenti dell'Interfaccia Grafica (PyQt6)
+│   │   ├── HaptyHub.py                 # Dashboard principale
+│   │   ├── android_model_window.py     # Finestra generazione overlay per Tablet
+│   │   ├── circuit_model_window.py     # Finestra generazione base interattiva (NanoVNA)
+│   │   ├── basic_haptic_modeler.py     # Finestra generazione schema in rilievo (senza interazione)
+│   │   ├── calibration_window.py       # Finestra di calibrazione e associazione sensore
+│   │   ├── hapticReader_window.py      # Finestra di lettura con feedback vocale (TTS)
+│   │   └── panels.py                   # Collezione di Pannelli UI
+│   └── utils/                  # Script di utilità e motori di elaborazione
+│       ├── run_elk.js                  # Motore di routing spaziale ELK (Node.js)
+│       ├── json_to_scad*.py            # Convertitori delle coordinate spaziali in OpenSCAD
+│       ├── gemini_worker.py            # Thread asincrono per chiamate LLM
+│       ├── sensor_*.py                 # Logica di comunicazione seriale con NanoVNA
+│       ├── tts_worker.py               # Motore Text-to-Speech per il feedback audio
+│       ├── stl_viewer.py               # Renderizzatore 3D integrato nella GUI
+│       └── ...                         # File secondari di Utilities
+├── config.py                     # Parametri globali, path e impostazioni di configurazione
+├── main.py                       # Entry point dell'applicazione
+├── requirements.txt              # Dipendenze Python necessarie
+├── install.sh / install.bat      # Script di installazione automatizzata (Linux/Windows)
+└── uninstall.sh / uninstall.bat  # Script di disinstallazione automatizzata (Linux/Windows)
 ```
 
 ## Modalità Debug
@@ -119,10 +126,11 @@ Per evitare "freeze" dell'interfaccia grafica:
 - Le chiamate API sono gestite in modo asincrono tramite `GeminiWorker`.
 - L'hardware (Seriale) è letto in loop da un `SensorWorker` separato. Le letture grezze sono stabilizzate algoritmicamente per ridurre il rumore e i falsi positivi durante la lettura.
 - La sintesi vocale utilizza un `TTSWorker` basato su una struttura a **Queue** thread-safe. Questo previene crash di **pyttsx3**/motori COM e blocchi UI, assicurando un'esperienza fluida anche se l'utente tocca i nodi velocemente.
+- La conversione da file `.scad` a file `.stl` per la visualizzazione in App e la successiva stampa è gestita da `STLCompilerWorker`.
 
 ## Come aggiungere un nuovo tipo di Schema (Pattern Strategy)
 Per aggiungere il supporto a un nuovo tipo di diagramma da processare con l'IA:
-- **Crea i Prompt**: Crea una nuova cartella in `src/prompts/` (es. `NuovoSchema/`) e aggiungi due file: `phase1.txt` (Vision-to-Text) e `phase2.txt` (Text-to-SCAD).
+- **Crea i Prompt**: Crea una nuova cartella in `src/prompts/`, differenziandolo fra uno interattivo o meno (es. `/basic/NuovoSchema/` o `/interactive/NuovoSchema/`) e aggiungi due file: `phase1.txt` (Vision-to-Text) e `phase2.txt` (Text-to-SCAD), si consiglia di fare riferimento ai prompt già presenti nella medesima cartella come riferimento.
 - **Crea la Logica Prompt**: In `src/prompts/templates.py`, crea una classe che eredita da `BaseTemplate`. Implementa i metodi `get_phase_1()` e `get_phase_2()` per iniettare i parametri dell'utente nel testo.
 - **Crea il Pannello UI**: In `src/ui/panels.py`, crea una classe che eredita da `BaseTemplatePanel`. Crea qui il form (campi di testo, spinbox) per raccogliere i dati specifici dal frontend.
 - **Registra il Template**: In `src/ui/landing_window.py`, aggiungi il nuovo pannello allo `QStackedWidget` nella colonna di destra e aggiungi una nuova azione checkable nel menu in alto ("Template").
