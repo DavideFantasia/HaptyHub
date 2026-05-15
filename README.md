@@ -14,17 +14,16 @@ Per eseguire il software è necessario avere [Python 3](https://www.python.org/d
 git clone git@github.com:DavideFantasia/HaptyHub.git
 cd HaptyHub
 ```
-
-Oppure installare il progetto in formato `.zip` e decomprimerlo.
+In alternativa, è possibile scaricare il progetto in formato `.zip` ed estrarlo.
 
 ## 2. Eseguire l'installazione automatica
 
 ### Su Windows:
+Esegui il file `install.bat` (tramite doppio clic o da terminale). Se Windows mostra un avviso di sicurezza, fai clic col tasto destro ed esegui come amministratore.
+L'avvio successivo dell'applicazione potrà avvenire tramite il collegamento creato sul Desktop o lanciando `HaptyHub.bat`.
+
 Fai doppio clic sul file `install.bat` oppure eseguilo da terminale. Lo script configurerà l'ambiente e creerà un collegamento sul Desktop.
 - In caso di lamentele da parte di Windows, fare tasto destro sul file ed _eseguire come amministratore_
-
-#### Avvio
-Per avviare l'eseguibile si può lanciare il file `HaptyHub.bat` o direttamente ricercando l'applicazione fra quelle disponibili, anche tramite collegamento sul Desktop.
 
 ### Su Linux/macOS:
 Apri il terminale ed esegui lo script bash (ti verrà chiesta la password per configurare le regole `udev` necessarie alla lettura della porta USB):
@@ -33,8 +32,7 @@ Apri il terminale ed esegui lo script bash (ti verrà chiesta la password per co
 chmod +x install.sh
 ./install.sh
 ```
-#### Avvio
-Per avviare l'eseguibile si può lanciare il file `HaptyHub.sh` o direttamente ricercando l'applicazione fra quelle disponibili.
+L'avvio successivo potrà avvenire ricercando l'applicazione tra i programmi o lanciando `HaptyHub.sh`.
 
 ### 3. Configurazione API Key
 Il Software utilizza le API di Google Gemini. Dopo l'installazione, verrà generato un file denominato `.env` nella cartella principale.
@@ -42,21 +40,21 @@ Puoi inserire la tua chiave in due modi:
 1. Avviando il programma e andando nel menu in alto: `Opzioni -> API Key`.
 2. Aprendo il file `.env` con un editor di testo e incollando la chiave: `GEMINI_API_KEY=la_tua_chiave`
 
-La propria chiave di Gemini è trovabile al seguente [link](https://aistudio.google.com/api-keys)
+La propria chiave di Gemini è ottenibile gratuitamente al seguente [link](https://aistudio.google.com/api-keys)
 
 ---
 
 # Guida all'uso
 Il software è diviso in tre flussi di lavoro principali, accessibili dalla UI:
 
-## Creazione di file SCAD da foto
+## Creazione di modelli 3D da foto
 Questa funzione traduce un'immagine 2D in codice 3D.
 
 **1.** Avvia l'applicazione (doppio clic sull'icona creata sul Desktop o sull'eseguibile creato nella cartella di lavoro).
 **2.** Selezionare la Funzione Desiderata<br>
   **a.** Se si vuole creare un modello 3D: trascina un'immagine (es. Flow Chart, Grafo) nell'area di **PREVIEW IMG** a sinistra, oppure cliccaci sopra per selezionare un file.<br>
   **b.** Seleziona il tipo di diagramma dal **menu Template** in alto (es. _Direct Graph_, _Flow Chart_).<br>
-  **c.** Compila i parametri richiesti in base all'operazione, come per esempio `Opzioni->Aggiungi Device/Carica Device` per la generazione di Overlay Tablet; o `File->importa Grafo` in lettura di un grafo aptico<br>
+  **c.** Compila i parametri richiesti in base all'operazione, come per esempio `Opzioni->Aggiungi Device/Carica Device` per la generazione di Overlay Tablet<br>
 **6.** Se si vuole generare un modello 3D, basterà cliccare sul pulsante Invia in basso a destra. L'IA elaborerà l'immagine e salverà automaticamente il file generato nella cartella `output/`, visualizzando a fine processo il modello 3D nel visualizzatore 3D a lato.
 
 ## Calibrazione e Associazione (Grafi Aptici)
