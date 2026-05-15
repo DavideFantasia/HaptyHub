@@ -391,7 +391,7 @@ class AndroidModelWindow(QMainWindow):
             clean_json = raw_json.replace("```json", "").replace("```", "").strip()
             graph_data = json.loads(clean_json)
 
-            # --- NUOVO: CONTROLLO E INIEZIONE DISPOSITIVO ---
+            # --- CONTROLLO E INIEZIONE DISPOSITIVO ---
             if getattr(config, 'ACTIVE_DEVICE', None) is None:
                 self.update_ui_progress("ATTENZIONE: Nessun dispositivo selezionato. Uso valori di default.")
             else:
@@ -404,6 +404,8 @@ class AndroidModelWindow(QMainWindow):
                 graph_data['margin_right'] = dev.margin_right
                 graph_data['tablet_actual_width'] = dev.body_width
                 graph_data['tablet_actual_height'] = dev.body_height
+
+                print(f">> Dispositivo di dim {graph_data['tablet_actual_height']}x{graph_data['tablet_actual_width']} caricato con successo. Parametri iniettati nel grafo ELK.")
             # ------------------------------------------------
             
             # Esegue ELK (Javascript)
@@ -534,9 +536,7 @@ class AndroidModelWindow(QMainWindow):
                 # 1. Diciamo al thread di fermare il suo event loop (se ne ha uno)
                 self.worker.quit()
                 
-                # 2. BLOCCO FONDAMENTALE: blocca l'esecuzione per qualche millisecondo 
-                # finché il thread C++ sottostante non è VERAMENTE e completamente terminato.
-                self.worker.wait() 
+                #self.worker.wait() 
                 
                 # 3. Ora che è un "cadavere" sicuro, diciamo a PyQt di smaltirlo
                 self.worker.deleteLater()
