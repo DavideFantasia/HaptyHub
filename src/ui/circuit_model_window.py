@@ -306,9 +306,7 @@ class CircuitModelWindow(QMainWindow):
                 # 1. Diciamo al thread di fermare il suo event loop (se ne ha uno)
                 self.worker.quit()
                 
-                # 2. BLOCCO FONDAMENTALE: blocca l'esecuzione per qualche millisecondo 
-                # finché il thread C++ sottostante non è VERAMENTE e completamente terminato.
-                self.worker.wait() 
+                #self.worker.wait() 
                 
                 # 3. Ora che è un "cadavere" sicuro, diciamo a PyQt di smaltirlo
                 self.worker.deleteLater()
