@@ -1,4 +1,4 @@
-import json
+import json, os, config
 
 def generate_scad(json_filepath, scad_filepath):
     # 1. LOAD & PARSE DATA
@@ -89,7 +89,7 @@ def generate_scad(json_filepath, scad_filepath):
     # 2. OPENSCAD TEMPLATE
     scad_header = f"""// --- GLOBAL SETTINGS ---
     
-use <braille.scad>; 
+use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
 $fn = 64;
 base_width = {base_width};
 base_height = {base_height};
