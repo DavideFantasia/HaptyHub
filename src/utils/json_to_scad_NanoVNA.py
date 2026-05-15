@@ -90,7 +90,7 @@ def generate_scad(json_filepath, scad_filepath):
     scad_header = f"""// --- GLOBAL SETTINGS ---
     
 use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
-$fn = 64;
+$fn = 32;
 base_width = {base_width};
 base_height = {base_height};
 base_thickness = 4;

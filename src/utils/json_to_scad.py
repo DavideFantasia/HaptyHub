@@ -136,7 +136,7 @@ def generate_scad(json_filepath, base_scad_filepath):
     scad = f"""// --- GLOBAL SETTINGS & CONSTANTS ---
 
 use <{os.path.join(config.UTILS_DIR, 'braille.scad')}>; // library for the braille text
-$fn = 64;
+$fn = 32;
 base_width = {screen_width};
 base_height = {screen_height};
 base_thickness = 2;
@@ -188,7 +188,7 @@ function scale_p(p) = [p[0] * grid_spacing + x_offset, p[1] * grid_spacing + y_o
 
 // --- MODULES ---
 module draw_shape(type) {{
-    if (type == "circle") offset(r = rounding_radius) circle(d = block_size, $fn=64);
+    if (type == "circle") offset(r = rounding_radius) circle(d = block_size, $fn=32);
     else if (type == "trapezoid") offset(r = rounding_radius) polygon([[-block_size/2+(block_size*0.15), block_size/2], [block_size/2+(block_size*0.15), block_size/2], [block_size/2-(block_size*0.15), -block_size/2], [-block_size/2-(block_size*0.15), -block_size/2]]);
     else if (type == "diamond") offset(r = rounding_radius) rotate([0, 0, 45]) square([block_size, block_size], center=true);
     else offset(r = rounding_radius) square([block_size, block_size], center=true);
