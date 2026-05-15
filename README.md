@@ -5,11 +5,28 @@ Oltre alla generazione del modello 3D, il software si interfaccia con hardware e
 L'obiettivo principale è favorire l'accessibilità allo studio per studenti ciechi o ipovedenti (Low Vision), permettendo la stampa 3D rapida di materiale didattico e l'esplorazione aptica interattiva.
 
 ---
+## Indice
+- [Installazione e Setup](#installazione-e-setup)
+  - [1. Clonare il repository](#1-clonare-il-repository)
+  - [2. Eseguire l'installazione automatica](#2-eseguire-linstallazione-automatica)
+  - [3. Configurazione API Key](#3-configurazione-api-key)
+- [Guida all'uso](#guida-alluso)
+  - [Creazione del Modello 3D da Immagine](#creazione-di-modelli-3d-da-foto)
+  - [Calibrazione Sensore (Grafi Aptici)](#calibrazione-e-associazione-grafi-aptici)
+  - [Lettura Interattiva](#lettura-interattiva-del-grafo-aptico)
+- [Note di Sviluppo e Architettura](#note-di-sviluppo-e-architettura)
+  - [Struttura del Progetto](#struttura-del-progetto)
+  - [Modalità Debug](#modalità-debug)
+  - [Multithreading e Hardware](#multithreading-e-hardware)
+  - [Estensibilità (Pattern Strategy)](#estensibilità-pattern-strategy)
+- [Disinstallazione](#disinstallazione)
+
+---
 
 # Installazione e Setup
 Per eseguire il software è necessario avere [Python 3](https://www.python.org/downloads/) installato sul sistema. Il progetto include script di installazione automatica che creano un ambiente virtuale, installano le dipendenze e creano le scorciatoie sul desktop.
 
-## 1.    Clonare il repository
+## 1. Clonare il repository
 ```bash
 git clone git@github.com:DavideFantasia/HaptyHub.git
 cd HaptyHub
@@ -126,7 +143,7 @@ Per evitare "freeze" dell'interfaccia grafica:
 - La sintesi vocale utilizza un `TTSWorker` basato su una struttura a **Queue** thread-safe. Questo previene crash di **pyttsx3**/motori COM e blocchi UI, assicurando un'esperienza fluida anche se l'utente tocca i nodi velocemente.
 - La conversione da file `.scad` a file `.stl` per la visualizzazione in App e la successiva stampa è gestita da `STLCompilerWorker`.
 
-## Come aggiungere un nuovo tipo di Schema (Pattern Strategy)
+## Estensibilità (Pattern Strategy)
 Per aggiungere il supporto a un nuovo tipo di diagramma da processare con l'IA:
 - **Crea i Prompt**: Crea una nuova cartella in `src/prompts/`, differenziandolo fra uno interattivo o meno (es. `/basic/NuovoSchema/` o `/interactive/NuovoSchema/`) e aggiungi due file: `phase1.txt` (Vision-to-Text) e `phase2.txt` (Text-to-SCAD), si consiglia di fare riferimento ai prompt già presenti nella medesima cartella come riferimento.
 - **Crea la Logica Prompt**: In `src/prompts/templates.py`, crea una classe che eredita da `BaseTemplate`. Implementa i metodi `get_phase_1()` e `get_phase_2()` per iniettare i parametri dell'utente nel testo.
