@@ -72,7 +72,7 @@ class STLViewerWidget(QWidget):
             self.grid = None
 
         self.grid = gl.GLGridItem()
-        self.grid.scale(10, 10, 1)
+        self.grid.scale(20, 20, 1)
         self.view.addItem(self.grid)
 
     def cleanup(self):
@@ -106,20 +106,69 @@ class STLViewerWidget(QWidget):
             max_bounds = vertices.max(axis=0)
             center = (min_bounds + max_bounds) / 2.0
             size = np.linalg.norm(max_bounds - min_bounds)
-            vertices = vertices - center
+            
+            # Centriamo X e Y, ma poggiamo Z (la base) esattamente sullo 0
+            center_x = (min_bounds[0] + max_bounds[0]) / 2.0
+            center_y = (min_bounds[1] + max_bounds[1]) / 2.0
+            min_z = min_bounds[2] 
+            
+            vertices[:, 0] -= center_x
+            vertices[:, 1] -= center_y
+            vertices[:, 2] -= min_z
 
             mesh_data = gl.MeshData(vertexes=vertices, faces=faces)
+            if 'relief_shader' not in shaders.ShaderProgram.names:
+                shaders.ShaderProgram('relief_shader', [
+                    shaders.VertexShader("""
+                        uniform mat4 u_mvp;
+                        uniform mat3 u_normal;
+                        attribute vec4 a_position;
+                        attribute vec3 a_normal;
+                        attribute vec4 a_color;
+                        varying vec4 v_color;
+                        varying vec3 v_normal;
+                        
+                        void main() {
+                            v_normal = normalize(u_normal * a_normal);
+                            v_color = a_color;
+                            gl_Position = u_mvp * a_position;
+                        }
+                    """),
+                    shaders.FragmentShader("""
+                        precision mediump float; // <-- AGGIUNTA FONDAMENTALE PER LINUX/MESA
+                        
+                        varying vec4 v_color;
+                        varying vec3 v_normal;
+                        
+                        void main() {
+                            // Luce Principale (X, Y, Z). Z=1.0 significa dall'alto. 
+                            vec3 lightDir = normalize(vec3(0.2, -0.3, 1.0));
+                            float diff = max(dot(v_normal, lightDir), 0.0);
+                            
+                            // Luce di riempimento dal lato opposto
+                            vec3 fillDir = normalize(vec3(-0.5, 0.5, 0.5));
+                            float fill = max(dot(v_normal, fillDir), 0.0);
+                            
+                            // Luce ambientale di base
+                            float ambient = 0.4; 
+                            
+                            float intensity = ambient + (diff * 0.6) + (fill * 0.15);
+                            gl_FragColor = vec4(v_color.rgb * intensity, v_color.a);
+                        }
+                    """)
+                ])
+
             self.current_mesh_item = gl.GLMeshItem(
                 meshdata=mesh_data,
                 smooth=False,
                 drawEdges=False,
                 color=(0.9, 0.9, 0.9, 1.0),
-                shader='shaded',
+                shader='relief_shader',
                 glOptions='opaque'
             )
 
             self.view.addItem(self.current_mesh_item)
-            self.view.setCameraPosition(distance=size * 1.5, elevation=35, azimuth=45)
+            self.view.setCameraPosition(distance=size * 1.5, elevation=60, azimuth=-45)
 
         except Exception as e:
             print(f"❌ Errore nel caricamento 3D: {e}")
