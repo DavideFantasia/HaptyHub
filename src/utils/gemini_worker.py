@@ -76,9 +76,15 @@ class GeminiWorker(QThread):
             self.error.emit(f"Errore API: {str(e)}")
 
     def phase_1_only(self):
-        """Metodo alternativo per eseguire solo la Fase 1 (analisi immagine) e restituire il testo."""
-        return self.client.analyze_image(self.image_path, self.prompt_fase_1)
-    
+        """Metodo alternativo per eseguire solo la Fase 1 (analisi immagine) e restituire il testo."""\
+        # chiamata reale a Gemini per analizzare l'immagine e restituire il testo (JSON o descrizione)
+        if config.DEBUG_MODE == False:
+            return self.client.analyze_image(self.image_path, self.prompt_fase_1)
+        else:
+            # returniamo una risposta prefatta di Gemini per testare la logica senza chiamate API reali
+            # usando il json temp/GeminiOutput_Debug.json
+            with open(os.path.join(config.TEMP_DIR, "GeminiOutput_Debug.json"), "r", encoding="utf-8") as f:
+                return f.read()
     def phase_2_only(self, risultato_fase_1):
         self.progress.emit("Fase 2: Generazione del modello 3D (OpenSCAD)...")
         scad_code = self.client.generate_scad(risultato_fase_1, self.prompt_fase_2)
