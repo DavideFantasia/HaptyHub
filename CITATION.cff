@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use this software, code, or data in your research, please consider citing this paper"
+title: "HaptyHub"
+authors:
+  - family-names: "Fantasia"
+    given-names: "Davide"
+  - family-names: "Pea"
+    given-names: "Stefano"
+  - family-names: "Tinfena"
+    given-names: "Lorenzo"
+version: 1.0.0
+date-released: 2026-09-16
+url: "https://github.com/DavideFantasia/HaptyHub"
+
+preferred-citation:
+  type: conference-paper
+  title: "Audio Tactile for Accessible Teaching in STEM Disciplines: a Comparison of Two Low-Cost Production Chains"
+  authors:
+    - family-names: "Poggianti"
+      given-names: "Camilla"
+    - family-names: "Davide"
+      given-names: "Fantasia"
+    - family-names: "Stefano"
+      given-names: "Pea"
+    - family-names: "Lorenzo"
+      given-names: "Tinfena"
+    - family-names: "Danilo"
+      given-names: "Brizzi"
+    - family-names: "Barbara"
+      given-names: "Leporini"
+    - family-names: "Susanna"
+      given-names: "Pelagatti"
+    - family-names: "Giuseppe"
+      given-names: "Prencipe"
+    - family-names: "Corrado"
+      given-names: "Priami"
+    - family-names: "Stefano"
+      given-names: "Chessa"
+  journal: "I-Cities 2026"
+  year: 2026
+  url: "https://icities26.unibs.it/papers/paper-5.pdf"
