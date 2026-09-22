@@ -2,6 +2,11 @@
 
 ---
 # HaptyHub
+
+[📄 Paper](https://icities26.unibs.it/papers/paper-5.pdf)
+
+---
+
 HaptyHub is a desktop application that uses Artificial Intelligence (LLM x Computer Vision) to translate two-dimensional diagrams, maps, and graphs (found in slides or notes) into tactile 3D models (`.scad` files).
 In addition to generating the 3D model, the software interfaces with external hardware to **make the 3D models interactive**: by touching the nodes of the printed model, the application recognizes the touch and reads the node's description out loud via Text-to-Speech, or through the use of a Tablet with the companion app installed: [HaptyApp](https://github.com/StefanoPea/HaptyApp).
 
@@ -23,6 +28,7 @@ The main goal is to promote study accessibility for blind or low-vision students
   - [Multithreading and Hardware](#multithreading-and-hardware)
   - [Extensibility (Strategy Pattern)](#extensibility-strategy-pattern)
 - [Uninstallation](#uninstallation)
+- [Citations](#citations)
 
 ---
 
@@ -154,3 +160,19 @@ To add support for a new type of diagram to be processed with AI:
 If you wish to remove the software and clean your system (including virtual environments and USB rules on Linux):
 - **Windows**: Run `uninstall.bat`.
 - **Linux**: Run `./uninstall.sh`.
+
+# Citations
+If you use this software, code, or data in your research, please consider citing our [paper](https://icities26.unibs.it/papers/paper-5.pdf):
+
+**Plain text:**
+> Poggianti Camilla et al. (2026). Audio Tactile for Accessible Teaching in STEM Disciplines. *I-Cities 2026*
+
+**BibTeX:**
+```bibtex
+@inproceedings{Poggianti2026,
+  title={Audio Tactile for Accessible Teaching in STEM Disciplines: a Comparison of Two Low-Cost Production Chains},
+  author={Camilla Poggianti et al. },
+  journal={i-cities 2026},
+  year={2026},
+  url={[https://icities26.unibs.it/papers/paper-5.pdf](https://icities26.unibs.it/papers/paper-5.pdf)}
+}
