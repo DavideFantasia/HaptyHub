@@ -2,6 +2,10 @@
 
 ---
 # HaptyHub
+
+[📄 pubblicazione](https://icities26.unibs.it/papers/paper-5.pdf)
+
+---
 HaptyHub è un'applicazione desktop che utilizza l'Intelligenza Artificiale (LLM $\times$ Computer Vision) per tradurre diagrammi, mappe e grafi bidimensionali (presenti in slide o appunti) in modelli 3D tattili (file `.scad`).<br>
 Oltre alla generazione del modello 3D, il software si interfaccia con hardware esterno per **rendere i modelli 3D interattivi**: toccando i nodi del modello stampato, l'applicazione riconosce il tocco e legge ad alta voce la descrizione del nodo tramite sintesi vocale (Text-to-Speech), o tramite l'uso di un Tablet su cui è installata l'app companion: [HaptyApp](https://github.com/StefanoPea/HaptyApp).
 
@@ -23,6 +27,7 @@ L'obiettivo principale è favorire l'accessibilità allo studio per studenti cie
   - [Multithreading e Hardware](#multithreading-e-hardware)
   - [Estensibilità (Pattern Strategy)](#estensibilità-pattern-strategy)
 - [Disinstallazione](#disinstallazione)
+- [Citazioni](#citazioni)
 
 ---
 
@@ -157,3 +162,19 @@ Per aggiungere il supporto a un nuovo tipo di diagramma da processare con l'IA:
 Se desideri rimuovere il software e pulire il sistema (inclusi gli ambienti virtuali e le regole USB su Linux):
 - **Windows**: Esegui `uninstall.bat`.
 - **Linux**: Esegui `./uninstall.sh`.
+
+# Citazioni
+Se utilizzi questo software, il codice o i dati di questo progetto per la tua ricerca, ti preghiamo di citare la nostra pubblicazione [Audio Tactile for Accessible Teaching in STEM Disciplines](https://icities26.unibs.it/papers/paper-5.pdf):
+
+**Citazione testuale:**
+> Poggianti Camilla et al. (2026). Audio Tactile for Accessible Teaching in STEM Disciplines. *I-Cities 2026*
+
+**BibTeX:**
+```bibtex
+@inproceedings{Poggianti2026,
+  title={Audio Tactile for Accessible Teaching in STEM Disciplines: a Comparison of Two Low-Cost Production Chains},
+  author={Camilla Poggianti et al. },
+  journal={i-cities 2026},
+  year={2026},
+  url={[https://icities26.unibs.it/papers/paper-5.pdf](https://icities26.unibs.it/papers/paper-5.pdf)}
+}
