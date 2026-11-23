@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ===========================================
 echo  Installazione di HaptyHub 
 echo ===========================================
@@ -107,7 +108,8 @@ if not exist ".env" (
 echo [5/5] Creazione del file eseguibile per terminale...
 if not exist "HaptyHub.bat" (
     (echo @echo off) > HaptyHub.bat
-    (echo source venv\Scripts\activate.bat) >> HaptyHub.bat
+    (echo cd /d "%%~dp0") >> HaptyHub.bat
+    (echo call venv\Scripts\activate.bat) >> HaptyHub.bat
     (echo python main.py) >> HaptyHub.bat
     (echo call venv\Scripts\deactivate.bat) >> HaptyHub.bat
 )
