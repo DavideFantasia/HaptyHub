@@ -1,6 +1,7 @@
 @echo off
+cd /d "%~dp0"
 echo =================================
-echo  Disinstallazione di HaptyGraph
+echo  Disinstallazione di HaptyHub
 echo =================================
 
 :: 1. Rimozione dell'Ambiente Virtuale
@@ -14,7 +15,7 @@ if exist venv\ (
 
 :: 2. Rimozione della Scorciatoia (Icona dal Desktop)
 echo [2/2] Rimozione dell'icona dal Desktop...
-set SHORTCUT_PATH=%USERPROFILE%\Desktop\HaptyGraph.lnk
+set SHORTCUT_PATH=%USERPROFILE%\Desktop\HaptyHub.lnk
 
 if exist "%SHORTCUT_PATH%" (
     del /q "%SHORTCUT_PATH%"
